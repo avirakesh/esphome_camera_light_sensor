@@ -1,0 +1,22 @@
+# ESPHome Build Artifacts
+.esphome/
+build/
+*.bin
+*.elf
+*.map
+
+# Python/Environment
+__pycache__/
+*.pyc
+venv/
+.venv/
+env/
+
+# Editor/OS Specific
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Secrets (Highly Recommended)
+secrets.yaml

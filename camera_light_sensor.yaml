@@ -1,0 +1,22 @@
+esphome:
+  name: stove-sensor
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+# Point to the local folder instead of Git
+external_components:
+  - source:
+      type: local
+      path: .
+
+sensor:
+  - platform: camera_light_sensor
+    name: "Camera Light Sensor"
+    update_interval: 5s
+
+# Standard logging to see your ESP-IDF traces
+logger:
+  level: VERY_VERBOSE
