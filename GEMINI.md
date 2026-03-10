@@ -31,6 +31,13 @@ HSV-based matching.
   main loop MUST use `std::atomic` variables.
 - **Memory Management:** High-resolution frame buffers and RGB conversions MUST
   use **PSRAM** allocation via `heap_caps_malloc(..., MALLOC_CAP_SPIRAM)`.
+- **Power Efficiency:** 
+  - **Buffer Reuse:** A persistent RGB buffer in PSRAM MUST be used to avoid
+    frequent allocation/deallocation overhead.
+  - **Configurable Interval:** The background task frequency MUST be
+    configurable via `update_interval`.
+  - **Light Sleep:** ESP32 Light Sleep SHOULD be used for long intervals
+    (>1s) to conserve power while maintaining connectivity.
 
 ## Implementation Details
 
@@ -45,7 +52,7 @@ HSV-based matching.
 
 ### Component Structure
 - **Hub (`CameraLightSensorHub`):** Manages the camera, background task, and
-  optional HTTP snapshot server.
+  optional HTTP snapshot server. Controls capture frequency and power state.
 - **Sensor (`CameraLightSensor`):** Inherits from
   `binary_sensor::BinarySensor`. Represents a single ROI.
 
@@ -53,16 +60,22 @@ HSV-based matching.
 
 - **Namespaces:** All C++ code MUST reside within `esphome::camera_light_sensor`.
 - **Logging:** Use `ESP_LOG*` macros with the defined `TAG`. Minimize logging
-  within the `process_camera()` loop (2Hz frequency).
+  within the `process_camera()` loop.
 - **Types:** Use fixed-width types (`uint8_t`, `uint32_t`) for hardware logic.
+- **Member Variables:** Follow the project's existing style for member
+  variables (e.g., `port`, `sensors`) without trailing underscores unless
+  divergence is justified by standard library conventions.
 
 ## Testing & Validation
 
 1. **Compilation:** Verify changes via `esphome compile camera_light_sensor.yaml`.
 2. **ROI Alignment:** Use the HTTP snapshot server (port 8080) for coordinates.
-3. **Log Monitoring:** Use `VERY_VERBOSE` to observe live HSV calculations.
+3. **Log Monitoring:** Use `VERY_VERBOSE` to observe live HSV calculations and
+   task frequency.
 
 ## Common Pitfalls
 - **Hub Configuration:** NEVER provide a `name` for the hub in YAML.
 - **Resolution:** `1024x768` is the optimized default; increasing it SHALL be
   avoided unless absolutely necessary due to memory/CPU constraints.
+- **Sleep Management:** Ensure the Light Sleep wakeup timer accounts for task
+  execution time to prevent interval drift.

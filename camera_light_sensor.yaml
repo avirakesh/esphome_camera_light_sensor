@@ -56,9 +56,12 @@ camera_light_sensor:
   # Optional: If provided, starts a web server on this port.
   # Visiting http://<device_ip>:<port>/ serves a snapshot for ROI alignment.
   port: 8080
-  # Optional: Heartbeat interval for all sensors. State changes are
-  # pushed immediately (twice per second) regardless of this.
-  update_interval: 10s
+  # Optional: The frequency at which the camera captures and analyzes a frame.
+  # Defaults to 500ms (2Hz). Increasing this saves power.
+  update_interval: 1s
+  # Optional: Enables ESP32 Light Sleep between captures to save power.
+  # Recommended for update_intervals > 1s. Defaults to false.
+  light_sleep: true
 
 binary_sensor:
   - platform: camera_light_sensor
