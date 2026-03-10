@@ -140,22 +140,31 @@ void CameraLightSensorHub::process_camera() {
     return;
   }
 
-  bool rgb_allocated = false;
   uint8_t* out_buf = fb->buf;
 
   // Convert non-RGB888 formats to RGB888 for analysis
   if (fb->format != PIXFORMAT_RGB888) {
-    rgb_allocated = true;
-    out_buf = (uint8_t*)heap_caps_malloc(fb->width * fb->height * 3, MALLOC_CAP_SPIRAM);
-    if (!out_buf) {
-      ESP_LOGE(TAG, "RGB memory allocation failed (PSRAM)");
-      esp_camera_fb_return(fb);
-      return;
+    size_t required_size = fb->width * fb->height * 3;
+    
+    // Manage persistent buffer in PSRAM
+    if (this->rgb_buffer == nullptr || this->rgb_buffer_capacity < required_size) {
+      if (this->rgb_buffer != nullptr) {
+        free(this->rgb_buffer);
+      }
+      this->rgb_buffer = (uint8_t*)heap_caps_malloc(required_size, MALLOC_CAP_SPIRAM);
+      if (this->rgb_buffer == nullptr) {
+        ESP_LOGE(TAG, "RGB memory allocation failed (PSRAM)");
+        this->rgb_buffer_capacity = 0;
+        esp_camera_fb_return(fb);
+        return;
+      }
+      this->rgb_buffer_capacity = required_size;
     }
+    
+    out_buf = this->rgb_buffer;
     bool converted = fmt2rgb888(fb->buf, fb->len, fb->format, out_buf);
     if (!converted) {
       ESP_LOGE(TAG, "Format to RGB888 failed");
-      free(out_buf);
       esp_camera_fb_return(fb);
       return;
     }
@@ -220,10 +229,6 @@ void CameraLightSensorHub::process_camera() {
     }
   }
 
-  // Cleanup buffers
-  if (rgb_allocated) {
-    free(out_buf);
-  }
   esp_camera_fb_return(fb);
 }
 

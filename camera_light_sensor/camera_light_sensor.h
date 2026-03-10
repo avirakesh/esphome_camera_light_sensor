@@ -130,6 +130,8 @@ class CameraLightSensorHub : public PollingComponent {
   std::vector<CameraLightSensor*> sensors;  ///< List of managed sensors.
   uint16_t port = 0;                        ///< Snapshot HTTP server port (0 = disabled).
   uint32_t update_interval_ms = 500;        ///< Interval between captures in ms.
+  uint8_t* rgb_buffer = nullptr;            ///< Persistent RGB888 buffer in PSRAM.
+  size_t rgb_buffer_capacity = 0;           ///< Current capacity of the RGB buffer.
   httpd_handle_t camera_httpd = NULL;       ///< Handle for the snapshot server.
   TaskHandle_t task_handle = NULL;          ///< Handle for the background task.
   std::atomic<bool> data_ready{false};      ///< Flag signaling new processing results are ready.
