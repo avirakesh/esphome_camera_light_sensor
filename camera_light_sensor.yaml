@@ -1,13 +1,16 @@
+# Basic ESPHome configuration including the device name.
 esphome:
   name: stove-sensor
 
+# Specifies the hardware platform and framework.
+# ESP-IDF is preferred for camera stability and performance.
 esp32:
   board: esp32cam
   framework:
     type: esp-idf
 
-psram:
-
+# Network configuration for Home Assistant connectivity and the
+# snapshot preview server.
 wifi:
   fast_connect: true # Optional. Required if connecting to a hidden SSID
   networks:
@@ -15,12 +18,11 @@ wifi:
       password: !secret wifi_password
       hidden: true
 
-# Point to the local folder instead of Git
-external_components:
-  - source:
-      type: local
-      path: .
+# Enables external RAM, which is required by the ESP32-CAM to handle
+# image buffers for the camera and web server.
+psram:
 
+# Detailed pinout and settings for the ESP32-CAM hardware.
 esp32_camera:
   id: my_camera
   external_clock:
@@ -40,22 +42,40 @@ esp32_camera:
   horizontal_mirror: false
   frame_buffer_count: 2
 
+# Points ESPHome to the local directory containing the custom
+# camera_light_sensor component code.
+external_components:
+  - source:
+      type: local
+      path: .
+
 camera_light_sensor:
+  # The ID for this hub, to be referenced by the binary sensors.
   id: camera_hub
+  # Do not provide a 'name' here; this hub is a internal coordinator.
+  # Optional: If provided, starts a web server on this port.
+  # Visiting http://<device_ip>:<port>/ serves a snapshot for ROI alignment.
   port: 8080
+  # Optional: Heartbeat interval for all sensors. State changes are
+  # pushed immediately (twice per second) regardless of this.
   update_interval: 10s
 
 binary_sensor:
   - platform: camera_light_sensor
+    # The ID of the hub configured above.
     camera_light_sensor_id: camera_hub
+    # A list of regions to monitor.
     sensor_roi:
       - name: "Stove On"
+        # The Region of Interest coordinates [x1, y1, x2, y2].
         box: [927, 292, 930, 295]
+        # The target color in RGB [R, G, B].
         expected_color: [255, 0, 0]  # Red
       - name: "Surface Hot"
         box: [300, 300, 400, 400]
         expected_color: [255, 0, 0]  # Red
 
-# Standard logging to see your ESP-IDF traces
+# Enables logging over Serial/USB for debugging and monitoring
+# the image processing performance.
 logger:
   level: VERY_VERBOSE
