@@ -31,6 +31,16 @@ HSV-based matching.
   main loop MUST use `std::atomic` variables.
 - **Memory Management:** High-resolution frame buffers and RGB conversions MUST
   use **PSRAM** allocation via `heap_caps_malloc(..., MALLOC_CAP_SPIRAM)`.
+- **Power Efficiency:** 
+  - **Buffer Reuse:** A persistent RGB buffer in PSRAM MUST be used to avoid
+    frequent allocation/deallocation overhead.
+  - **Capture Frequency:** Controlled by `sensor_refresh_rate` (if provided) or
+    `update_interval` (falling back to 500ms).
+  - **Light Sleep:** Triggered only when `sensor_refresh_rate` is explicitly
+    provided. This allows the device to conserve power between captures while
+    maintaining the WiFi stack.
+  - **Sleep Management:** Ensure the Light Sleep wakeup timer accounts for task
+    execution time to prevent interval drift.
 
 ## Implementation Details
 

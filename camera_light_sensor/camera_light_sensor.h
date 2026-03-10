@@ -95,6 +95,12 @@ class CameraLightSensorHub : public PollingComponent {
    */
   void set_update_interval_ms(uint32_t ms) { this->update_interval_ms = ms; }
 
+  /**
+   * @brief Sets the interval between captures and enables Light Sleep if > 0.
+   * @param ms The interval in milliseconds.
+   */
+  void set_sensor_refresh_rate_ms(uint32_t ms) { this->sensor_refresh_rate_ms = ms; }
+
   /// @return Setup priority; ensures Wi-Fi is up before starting HTTP server.
   float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
 
@@ -130,6 +136,7 @@ class CameraLightSensorHub : public PollingComponent {
   std::vector<CameraLightSensor*> sensors;  ///< List of managed sensors.
   uint16_t port = 0;                        ///< Snapshot HTTP server port (0 = disabled).
   uint32_t update_interval_ms = 500;        ///< Interval between captures in ms.
+  uint32_t sensor_refresh_rate_ms = 0;      ///< Interval between captures using light sleep.
   uint8_t* rgb_buffer = nullptr;            ///< Persistent RGB888 buffer in PSRAM.
   size_t rgb_buffer_capacity = 0;           ///< Current capacity of the RGB buffer.
   httpd_handle_t camera_httpd = NULL;       ///< Handle for the snapshot server.

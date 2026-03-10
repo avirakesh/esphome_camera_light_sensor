@@ -18,26 +18,35 @@ The `camera_light_sensor` hub coordinates the camera and the sensors.
 camera_light_sensor:
   # The ID for this hub, to be referenced by the binary sensors.
   id: camera_hub
-  # Do not provide a 'name' here; this hub is a internal coordinator.
   # Optional: If provided, starts a web server on this port.
   # Visiting http://<device_ip>:<port>/ serves a snapshot for ROI alignment.
   port: 8080
   # Optional: Heartbeat interval for all sensors. State changes are
-  # pushed immediately (twice per second) regardless of this.
+  # pushed immediately regardless of this. Defaults to 10s.
   update_interval: 10s
-```
+  # Optional: The frequency at which the camera captures and analyzes a frame.
+  # If set, the ESP32 enters Light Sleep between captures to save power.
+  # If not provided, esp32 won't sleep and run the camera at 2fps.
+  sensor_refresh_rate: 5s
+  ```
 
-- **`id`** (Required, ID): The ID for this hub, to be referenced by the binary
+  - **`id`** (Required, ID): The ID for this hub, to be referenced by the binary
   sensors.
-- **`port`** (Optional, Port): If provided, starts a web server on this port.
+  - **`port`** (Optional, Port): If provided, starts a web server on this port.
   Visiting `http://<device_ip>:<port>/` will serve a JPEG snapshot from the
   camera. Useful for aligning the regions of interest (ROI).
-- **`update_interval`** (Optional, Time): How often the sensors should refresh
-  their state in Home Assistant. Defaults to `10s`. Note: State changes are
-  "pushed" immediately (twice per second) regardless of this interval.
-- **Note:** Do not provide a `name` for the hub, as it is a coordinator and
+  - **`update_interval`** (Optional, Time): The heartbeat interval for syncing
+  state with Home Assistant. Note: State changes are still pushed immediately
+  upon detection if the device is awake. Defaults to `10s`.
+  - **`sensor_refresh_rate`** (Optional, Time): The interval at which the camera
+  captures and analyzes a frame.
+  - If **provided**: The ESP32 will enter **Light Sleep** between captures to
+    save power. This is the recommended way to achieve low-power operation.
+  - If **not provided**: The capture frequency defaults to `update_interval`
+    (or `500ms` if `update_interval` is longer), and the device remains fully
+    powered (no sleep).
+  - **Note:** Do not provide a `name` for the hub, as it is a coordinator and
   should not be exposed as a separate entity in Home Assistant.
-
 ### Binary Sensor Configuration
 
 Define one or more binary sensors to monitor specific areas of the image.
