@@ -50,7 +50,7 @@ binary_sensor:
     camera_light_sensor_id: camera_hub
     sensor_roi:
       - name: "Stove On"
-        box: [100, 100, 200, 200]
+        box: [927, 292, 930, 295]
         expected_color: [255, 0, 0]  # Red
       - name: "Surface Hot"
         box: [300, 300, 400, 400]

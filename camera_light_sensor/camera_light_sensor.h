@@ -1,12 +1,14 @@
-#pragma once
-
 #include <algorithm>
+#include <atomic>
 #include <string>
 #include <vector>
 #include "esp_camera.h"
 #include "esp_http_server.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/core/component.h"
+#include "esphome/core/log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "img_converters.h"
 
 namespace esphome {
@@ -24,12 +26,16 @@ class CameraLightSensor : public binary_sensor::BinarySensor {
   uint32_t* get_roi() { return roi; }
   uint8_t* get_expected_color() { return expected_color; }
 
+  void set_latest_state(bool state) { this->latest_state = state; }
+  bool get_latest_state() const { return this->latest_state; }
+
   void update_state(bool state) { this->publish_state(state); }
 
  private:
   std::string name;
   uint32_t roi[4];            // Region of Interest: [x1, y1, x2, y2]
   uint8_t expected_color[3];  // Expected color in RGB: [R, G, B]
+  std::atomic<bool> latest_state{false};
 };
 
 // The Parent Hub (Handles the logic)
@@ -60,11 +66,47 @@ class CameraLightSensorHub : public PollingComponent {
     } else {
       ESP_LOGE("camera_light_sensor", "Failed to start HTTP server");
     }
+
+    // Start background task
+    xTaskCreatePinnedToCore(CameraLightSensorHub::task_wrapper, "camera_task", 8192, this, 1,
+                            &this->task_handle, 1);
+  }
+
+  void loop() override {
+    // Check if the background task has finished processing a frame
+    if (this->data_ready.exchange(false)) {
+      for (auto* s : sensors) {
+        bool latest = s->get_latest_state();
+        if (!s->has_state() || s->state != latest) {
+          s->publish_state(latest);
+        }
+      }
+    }
   }
 
   void update() override {
+    // Periodic update call (heartbeat)
+    for (auto* s : sensors) {
+      s->publish_state(s->get_latest_state());
+    }
+  }
+
+  static void task_wrapper(void* param) { static_cast<CameraLightSensorHub*>(param)->task_loop(); }
+
+  void task_loop() {
+    TickType_t last_wake_time = xTaskGetTickCount();
+    while (true) {
+      this->process_camera();
+      // Signal the main loop that new data is ready
+      this->data_ready = true;
+      // Adjust polling frequency of the background task here.
+      // 500ms is exactly twice per second.
+      vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(500));
+    }
+  }
+
+  void process_camera() {
     if (!esp_camera_sensor_get()) {
-      ESP_LOGE("camera_light_sensor", "Camera not initialized for update");
       return;
     }
 
@@ -85,10 +127,10 @@ class CameraLightSensorHub : public PollingComponent {
         return;
       }
       bool converted = fmt2rgb888(fb->buf, fb->len, fb->format, out_buf);
-      esp_camera_fb_return(fb);
       if (!converted) {
         ESP_LOGE("camera_light_sensor", "Format to RGB888 failed");
         free(out_buf);
+        esp_camera_fb_return(fb);
         return;
       }
     }
@@ -108,6 +150,7 @@ class CameraLightSensorHub : public PollingComponent {
       for (uint32_t y = y1; y < y2; y++) {
         for (uint32_t x = x1; x < x2; x++) {
           uint32_t idx = (y * fb->width + x) * 3;
+          // RGB888 order depends on the converter, usually R, G, B.
           r_sum += out_buf[idx + 2];  // R
           g_sum += out_buf[idx + 1];  // G
           b_sum += out_buf[idx + 0];  // B
@@ -124,26 +167,25 @@ class CameraLightSensorHub : public PollingComponent {
         int dg = avg_g - expected[1];
         int db = avg_b - expected[2];
 
-        // Example distance tolerance of 50
         float dist = sqrt(dr * dr + dg * dg + db * db);
         bool match = dist <= 50.0;
 
-        ESP_LOGD("camera_light_sensor", "Sensor '%s' avg rgb(%d,%d,%d) dist: %.1f -> %s",
-                 s->get_name().c_str(), avg_r, avg_g, avg_b, dist, match ? "ON" : "OFF");
-
-        s->update_state(match);
+        s->set_latest_state(match);
       }
     }
 
     if (rgb_allocated) {
       free(out_buf);
     }
+    esp_camera_fb_return(fb);
   }
 
  private:
   std::vector<CameraLightSensor*> sensors;
   uint16_t port = 8080;
   httpd_handle_t camera_httpd = NULL;
+  TaskHandle_t task_handle = NULL;
+  std::atomic<bool> data_ready{false};
 
   static esp_err_t capture_handler(httpd_req_t* req) {
     if (!esp_camera_sensor_get()) {
