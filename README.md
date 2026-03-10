@@ -18,35 +18,35 @@ The `camera_light_sensor` hub coordinates the camera and the sensors.
 camera_light_sensor:
   # The ID for this hub, to be referenced by the binary sensors.
   id: camera_hub
+  # The ID of the camera component to use.
+  camera_id: my_camera
   # Optional: If provided, starts a web server on this port.
   # Visiting http://<device_ip>:<port>/ serves a snapshot for ROI alignment.
   port: 8080
   # Optional: Heartbeat interval for all sensors. State changes are
   # pushed immediately regardless of this. Defaults to 10s.
   update_interval: 10s
-  # Optional: The frequency at which the camera captures and analyzes a frame.
-  # If set, the ESP32 enters Light Sleep between captures to save power.
-  # If not provided, esp32 won't sleep and run the camera at 2fps.
-  sensor_refresh_rate: 5s
-  ```
+  # Optional: If true, the ESP32 enters Light Sleep between captures
+  # to save power.
+  light_sleep: true
+```
 
   - **`id`** (Required, ID): The ID for this hub, to be referenced by the binary
   sensors.
+  - **`camera_id`** (Required, ID): The ID of the `esp32_camera` component. The
+  hub automatically synchronizes its capture frequency with the camera's
+  `idle_framerate`.
   - **`port`** (Optional, Port): If provided, starts a web server on this port.
   Visiting `http://<device_ip>:<port>/` will serve a JPEG snapshot from the
   camera. Useful for aligning the regions of interest (ROI).
   - **`update_interval`** (Optional, Time): The heartbeat interval for syncing
   state with Home Assistant. Note: State changes are still pushed immediately
-  upon detection if the device is awake. Defaults to `10s`.
-  - **`sensor_refresh_rate`** (Optional, Time): The interval at which the camera
-  captures and analyzes a frame.
-  - If **provided**: The ESP32 will enter **Light Sleep** between captures to
-    save power. This is the recommended way to achieve low-power operation.
-  - If **not provided**: The capture frequency defaults to `update_interval`
-    (or `500ms` if `update_interval` is longer), and the device remains fully
-    powered (no sleep).
+  upon detection. Defaults to `10s`.
+  - **`light_sleep`** (Optional, Boolean): If enabled, the ESP32 will enter
+    **Light Sleep** between captures to save power.
   - **Note:** Do not provide a `name` for the hub, as it is a coordinator and
   should not be exposed as a separate entity in Home Assistant.
+
 ### Binary Sensor Configuration
 
 Define one or more binary sensors to monitor specific areas of the image.
@@ -76,8 +76,9 @@ binary_sensor:
 
 ## How it Works
 
-1. **Background Task:** The hub spawns a FreeRTOS task that captures a camera
-   frame every 500ms.
+1. **Background Task:** The hub spawns a FreeRTOS task that captures and
+   analyzes a camera frame at the frequency defined by the camera's
+   `idle_framerate`.
 2. **HSV Conversion:** Each pixel in the ROI is converted from RGB to the HSV
    (Hue, Saturation, Value) colorspace.
 3. **Circular Averaging:** The Hue values are averaged using vector math

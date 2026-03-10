@@ -34,11 +34,11 @@ HSV-based matching.
 - **Power Efficiency:** 
   - **Buffer Reuse:** A persistent RGB buffer in PSRAM MUST be used to avoid
     frequent allocation/deallocation overhead.
-  - **Capture Frequency:** Controlled by `sensor_refresh_rate` (if provided) or
-    `update_interval` (falling back to 500ms).
-  - **Light Sleep:** Triggered only when `sensor_refresh_rate` is explicitly
-    provided. This allows the device to conserve power between captures while
-    maintaining the WiFi stack.
+  - **Capture Frequency:** The background task frequency is automatically
+    synchronized with the camera's `idle_framerate` via the mandatory
+    `camera_id` link.
+  - **Light Sleep:** Triggered when the `light_sleep` boolean is `true`. This
+    allows the device to conserve power between captures.
   - **Sleep Management:** Ensure the Light Sleep wakeup timer accounts for task
     execution time to prevent interval drift.
 
@@ -63,7 +63,7 @@ HSV-based matching.
 
 - **Namespaces:** All C++ code MUST reside within `esphome::camera_light_sensor`.
 - **Logging:** Use `ESP_LOG*` macros with the defined `TAG`. Minimize logging
-  within the `process_camera()` loop (2Hz frequency).
+  within the `process_camera()` loop.
 - **Types:** Use fixed-width types (`uint8_t`, `uint32_t`) for hardware logic.
 
 ## Testing & Validation

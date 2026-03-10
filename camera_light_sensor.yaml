@@ -51,17 +51,17 @@ external_components:
       path: .
 
 camera_light_sensor:
-  # The ID for this hub, to be referenced by the binary sensors.
   id: camera_hub
-  # Do not provide a 'name' here; this hub is a internal coordinator.
+  camera_id: my_camera
   # Optional: If provided, starts a web server on this port.
   # Visiting http://<device_ip>:<port>/ serves a snapshot for ROI alignment.
   port: 8080
   # Optional: Heartbeat interval for all sensors. State changes are
-  # pushed immediately (twice per second) regardless of this.
+  # pushed immediately regardless of this.
   update_interval: 10s
-  # Optional: The interval between camera captures. If set, the ESP32
-  # enters Light Sleep between captures to save power. Recommended for >1s.
+  # Optional: If true, the ESP32 enters Light Sleep between captures
+  # to save power. Sleep duration is based on the camera's idle_framerate.
+  light_sleep: false
 
 binary_sensor:
   - platform: camera_light_sensor

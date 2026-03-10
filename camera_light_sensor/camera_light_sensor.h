@@ -13,6 +13,11 @@
 #include "img_converters.h"
 
 namespace esphome {
+
+namespace esp32_camera {
+class ESP32Camera;
+}
+
 namespace camera_light_sensor {
 
 /**
@@ -84,6 +89,12 @@ class CameraLightSensorHub : public PollingComponent {
   void add_sensor(CameraLightSensor* s) { sensors.push_back(s); }
 
   /**
+   * @brief Sets the camera component to use for captures.
+   * @param camera Pointer to the ESP32 camera instance.
+   */
+  void set_camera(esp32_camera::ESP32Camera* camera) { this->camera = camera; }
+
+  /**
    * @brief Sets the HTTP server port for snapshots.
    * @param port The port to listen on.
    */
@@ -96,10 +107,16 @@ class CameraLightSensorHub : public PollingComponent {
   void set_update_interval_ms(uint32_t ms) { this->update_interval_ms = ms; }
 
   /**
-   * @brief Sets the interval between captures and enables Light Sleep if > 0.
+   * @brief Sets the duration for camera captures.
    * @param ms The interval in milliseconds.
    */
-  void set_sensor_refresh_rate_ms(uint32_t ms) { this->sensor_refresh_rate_ms = ms; }
+  void set_capture_interval_ms(uint32_t ms) { this->capture_interval_ms = ms; }
+
+  /**
+   * @brief Enables or disables Light Sleep between captures.
+   * @param enable True to enable Light Sleep.
+   */
+  void set_light_sleep(bool enable) { this->light_sleep = enable; }
 
   /// @return Setup priority; ensures Wi-Fi is up before starting HTTP server.
   float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
@@ -134,9 +151,11 @@ class CameraLightSensorHub : public PollingComponent {
 
  private:
   std::vector<CameraLightSensor*> sensors;  ///< List of managed sensors.
+  esp32_camera::ESP32Camera* camera{nullptr}; ///< Pointer to the ESP32 camera component.
   uint16_t port = 0;                        ///< Snapshot HTTP server port (0 = disabled).
   uint32_t update_interval_ms = 500;        ///< Interval between captures in ms.
-  uint32_t sensor_refresh_rate_ms = 0;      ///< Interval between captures using light sleep.
+  uint32_t capture_interval_ms = 0;         ///< Interval between captures (auto-derived).
+  bool light_sleep = false;                 ///< Whether to use light sleep between captures.
   uint8_t* rgb_buffer = nullptr;            ///< Persistent RGB888 buffer in PSRAM.
   size_t rgb_buffer_capacity = 0;           ///< Current capacity of the RGB buffer.
   httpd_handle_t camera_httpd = NULL;       ///< Handle for the snapshot server.
