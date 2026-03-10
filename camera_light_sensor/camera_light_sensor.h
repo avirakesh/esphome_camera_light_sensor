@@ -16,6 +16,16 @@ namespace esphome {
 namespace camera_light_sensor {
 
 /**
+ * @struct HSV
+ * @brief Simple 8-bit HSV color structure.
+ */
+struct HSV {
+  uint8_t h;  ///< Hue (0-255 map to 0-360°)
+  uint8_t s;  ///< Saturation (0-255)
+  uint8_t v;  ///< Value (0-255)
+};
+
+/**
  * @brief Individual sensor within the camera light sensor hub.
  *
  * Each sensor represents a Region of Interest (ROI) and an expected color.
@@ -35,8 +45,8 @@ class CameraLightSensor : public binary_sensor::BinarySensor {
   std::string get_name() const { return name; }
   /// @return Pointer to the ROI array [x1, y1, x2, y2].
   uint32_t* get_roi() { return roi; }
-  /// @return Pointer to the expected color array [R, G, B].
-  uint8_t* get_expected_color() { return expected_color; }
+  /// @return The expected HSV target.
+  HSV get_expected_hsv() const { return expected_hsv; }
 
   /**
    * @brief Updates the most recently calculated state from the background task.
@@ -55,7 +65,7 @@ class CameraLightSensor : public binary_sensor::BinarySensor {
  private:
   std::string name;                       ///< Display name of the sensor.
   uint32_t roi[4];                        ///< Region of Interest: [x1, y1, x2, y2].
-  uint8_t expected_color[3];              ///< Expected color in RGB: [R, G, B].
+  HSV expected_hsv;                       ///< Expected color in HSV.
   std::atomic<bool> latest_state{false};  ///< Thread-safe storage for the latest calculated state.
 };
 
@@ -100,6 +110,15 @@ class CameraLightSensorHub : public PollingComponent {
 
   /// Captures a frame, converts format if needed, and analyzes all ROIs.
   void process_camera();
+
+  /**
+   * @brief Fast integer RGB to HSV conversion.
+   * @param r Red component (0-255).
+   * @param g Green component (0-255).
+   * @param b Blue component (0-255).
+   * @return HSV structure with components mapped to 0-255.
+   */
+  static HSV rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b);
 
  private:
   std::vector<CameraLightSensor*> sensors;  ///< List of managed sensors.
