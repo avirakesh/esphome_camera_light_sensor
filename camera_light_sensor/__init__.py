@@ -4,7 +4,6 @@ from esphome.const import CONF_ID, CONF_PORT, CONF_UPDATE_INTERVAL
 
 # Shared keys
 CONF_CAMERA_LIGHT_SENSOR_ID = "camera_light_sensor_id"
-CONF_LIGHT_SLEEP = "light_sleep"
 
 # Define the C++ namespace for your component
 camera_light_sensor_ns = cg.esphome_ns.namespace("camera_light_sensor")
@@ -20,7 +19,6 @@ CONFIG_SCHEMA = cv.Schema(
         cv.GenerateID(): cv.declare_id(CameraLightSensorHub),
         cv.Optional(CONF_PORT): cv.port,
         cv.Optional(CONF_UPDATE_INTERVAL, default="500ms"): cv.positive_time_period_milliseconds,
-        cv.Optional(CONF_LIGHT_SLEEP, default=False): cv.boolean,
     }
 ).extend(cv.polling_component_schema("10s"))
 
@@ -32,4 +30,3 @@ async def to_code(config):
         cg.add(hub_var.set_port(config[CONF_PORT]))
     
     cg.add(hub_var.set_update_interval_ms(config[CONF_UPDATE_INTERVAL]))
-    cg.add(hub_var.set_light_sleep(config[CONF_LIGHT_SLEEP]))
