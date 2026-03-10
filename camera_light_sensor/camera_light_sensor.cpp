@@ -115,16 +115,14 @@ void CameraLightSensorHub::update() {
 
 /**
  * @brief Background task execution loop.
- *
- * Runs at a fixed frequency of 500ms (twice per second).
  */
 void CameraLightSensorHub::task_loop() {
   TickType_t last_wake_time = xTaskGetTickCount();
   while (true) {
     this->process_camera();
     this->data_ready = true;
-    // Precisely timed delay to maintain 2Hz processing frequency
-    vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(500));
+    // Precisely timed delay to maintain the configured processing frequency
+    vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(this->update_interval_ms));
   }
 }
 

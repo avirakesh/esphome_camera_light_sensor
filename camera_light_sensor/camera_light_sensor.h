@@ -89,6 +89,12 @@ class CameraLightSensorHub : public PollingComponent {
    */
   void set_port(uint16_t port) { this->port = port; }
 
+  /**
+   * @brief Sets the processing frequency for the background task.
+   * @param ms The interval in milliseconds.
+   */
+  void set_update_interval_ms(uint32_t ms) { this->update_interval_ms = ms; }
+
   /// @return Setup priority; ensures Wi-Fi is up before starting HTTP server.
   float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
 
@@ -123,6 +129,7 @@ class CameraLightSensorHub : public PollingComponent {
  private:
   std::vector<CameraLightSensor*> sensors;  ///< List of managed sensors.
   uint16_t port = 0;                        ///< Snapshot HTTP server port (0 = disabled).
+  uint32_t update_interval_ms = 500;        ///< Interval between captures in ms.
   httpd_handle_t camera_httpd = NULL;       ///< Handle for the snapshot server.
   TaskHandle_t task_handle = NULL;          ///< Handle for the background task.
   std::atomic<bool> data_ready{false};      ///< Flag signaling new processing results are ready.
