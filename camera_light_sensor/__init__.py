@@ -19,7 +19,6 @@ CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(CameraLightSensorHub),
         cv.Optional(CONF_PORT): cv.port,
-        cv.Optional(CONF_UPDATE_INTERVAL, default="500ms"): cv.positive_time_period_milliseconds,
         cv.Optional(CONF_SENSOR_REFRESH_RATE): cv.positive_time_period_milliseconds,
     }
 ).extend(cv.polling_component_schema("10s"))
@@ -27,11 +26,11 @@ CONFIG_SCHEMA = cv.Schema(
 async def to_code(config):
     hub_var = cg.new_Pvariable(config[cv.CONF_ID])
     await cg.register_component(hub_var, config)
-    
+
     if CONF_PORT in config:
         cg.add(hub_var.set_port(config[CONF_PORT]))
-    
+
     cg.add(hub_var.set_update_interval_ms(config[CONF_UPDATE_INTERVAL]))
-    
+
     if CONF_SENSOR_REFRESH_RATE in config:
         cg.add(hub_var.set_sensor_refresh_rate_ms(config[CONF_SENSOR_REFRESH_RATE]))

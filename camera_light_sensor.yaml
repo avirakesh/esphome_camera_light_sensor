@@ -41,6 +41,7 @@ esp32_camera:
   vertical_flip: false
   horizontal_mirror: false
   frame_buffer_count: 2
+  idle_framerate: 1fps
 
 # Points ESPHome to the local directory containing the custom
 # camera_light_sensor component code.
@@ -61,7 +62,6 @@ camera_light_sensor:
   update_interval: 10s
   # Optional: The interval between camera captures. If set, the ESP32
   # enters Light Sleep between captures to save power. Recommended for >1s.
-  sensor_refresh_rate: 5s
 
 binary_sensor:
   - platform: camera_light_sensor
@@ -71,12 +71,15 @@ binary_sensor:
     sensor_roi:
       - name: "Stove On"
         # The Region of Interest coordinates [x1, y1, x2, y2].
-        box: [927, 292, 930, 295]
+        box: [927, 292, 931, 296]
         # The target color in RGB [R, G, B].
         expected_color: [255, 0, 0]  # Red
       - name: "Surface Hot"
-        box: [300, 300, 400, 400]
+        box: [300, 300, 304, 304]
         expected_color: [255, 0, 0]  # Red
+      - name: "Surface Warm"
+        box: [820, 477, 824, 481]
+        expected_color: [236, 236, 236]  # White/Gray
 
 # Enables logging over Serial/USB for debugging and monitoring
 # the image processing performance.

@@ -10,7 +10,7 @@ static const char* const TAG = "camera_light_sensor";
 
 /**
  * @brief Fast integer RGB to HSV conversion.
- * 
+ *
  * Maps Hue to 0-255 (instead of 0-360°) to fit into a single byte.
  */
 HSV CameraLightSensorHub::rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b) {
@@ -54,9 +54,9 @@ void CameraLightSensor::set_sensor_info(std::string name,
   this->name = name;
   memcpy(this->roi, box.data(), sizeof(this->roi));
   this->expected_hsv = CameraLightSensorHub::rgb_to_hsv(color[0], color[1], color[2]);
-  
-  ESP_LOGI(TAG, "Sensor '%s' configured with Target HSV(%d, %d, %d)", 
-           this->name.c_str(), this->expected_hsv.h, this->expected_hsv.s, this->expected_hsv.v);
+
+  ESP_LOGI(TAG, "Sensor '%s' configured with Target HSV(%d, %d, %d)", this->name.c_str(),
+           this->expected_hsv.h, this->expected_hsv.s, this->expected_hsv.v);
 }
 
 /**
@@ -128,7 +128,7 @@ void CameraLightSensorHub::task_loop() {
       // We sleep for the specified duration.
       esp_sleep_enable_timer_wakeup(this->sensor_refresh_rate_ms * 1000ULL);
       esp_light_sleep_start();
-      
+
       // Resync the FreeRTOS tick count after sleep
       last_wake_time = xTaskGetTickCount();
     } else {
@@ -157,7 +157,7 @@ void CameraLightSensorHub::process_camera() {
   // Convert non-RGB888 formats to RGB888 for analysis
   if (fb->format != PIXFORMAT_RGB888) {
     size_t required_size = fb->width * fb->height * 3;
-    
+
     // Manage persistent buffer in PSRAM
     if (this->rgb_buffer == nullptr || this->rgb_buffer_capacity < required_size) {
       if (this->rgb_buffer != nullptr) {
@@ -172,7 +172,7 @@ void CameraLightSensorHub::process_camera() {
       }
       this->rgb_buffer_capacity = required_size;
     }
-    
+
     out_buf = this->rgb_buffer;
     bool converted = fmt2rgb888(fb->buf, fb->len, fb->format, out_buf);
     if (!converted) {
@@ -201,12 +201,12 @@ void CameraLightSensorHub::process_camera() {
         uint32_t idx = (y * fb->width + x) * 3;
         // Map BGR to RGB for the conversion
         HSV hsv = rgb_to_hsv(out_buf[idx + 2], out_buf[idx + 1], out_buf[idx + 0]);
-        
+
         // Circular averaging for Hue using vector components
         float angle = hsv.h * (2.0f * M_PI / 256.0f);
         sin_h_sum += std::sin(angle);
         cos_h_sum += std::cos(angle);
-        
+
         s_sum += hsv.s;
         v_sum += hsv.v;
         count++;
@@ -218,7 +218,7 @@ void CameraLightSensorHub::process_camera() {
       float avg_h_angle = std::atan2(sin_h_sum / count, cos_h_sum / count);
       if (avg_h_angle < 0) avg_h_angle += 2.0f * M_PI;
       uint8_t avg_h = static_cast<uint8_t>(avg_h_angle * (256.0f / (2.0f * M_PI)));
-      
+
       uint8_t avg_s = s_sum / count;
       uint8_t avg_v = v_sum / count;
 
@@ -226,7 +226,7 @@ void CameraLightSensorHub::process_camera() {
       // 1. Hue distance (circular)
       int h_dist = std::abs((int)avg_h - (int)expected.h);
       if (h_dist > 128) h_dist = 256 - h_dist;
-      
+
       // 2. Saturation and Value distance
       int s_dist = std::abs((int)avg_s - (int)expected.s);
       int v_dist = std::abs((int)avg_v - (int)expected.v);
