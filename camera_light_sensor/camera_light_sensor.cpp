@@ -1,5 +1,6 @@
 #include "camera_light_sensor.h"
 #include <cmath>
+#include "esp_sleep.h"
 #include "esphome/core/log.h"
 
 namespace esphome {
@@ -121,8 +122,20 @@ void CameraLightSensorHub::task_loop() {
   while (true) {
     this->process_camera();
     this->data_ready = true;
-    // Precisely timed delay to maintain the configured processing frequency
-    vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(this->update_interval_ms));
+
+    if (this->light_sleep && this->update_interval_ms > 100) {
+      // Use ESP32 Light Sleep to conserve power between captures.
+      // We sleep for slightly less than the interval to allow for task overhead.
+      uint32_t sleep_ms = this->update_interval_ms - 50;
+      esp_sleep_enable_timer_wakeup(sleep_ms * 1000ULL);
+      esp_light_sleep_start();
+      
+      // Resync the FreeRTOS tick count after sleep
+      last_wake_time = xTaskGetTickCount();
+    } else {
+      // Precisely timed delay to maintain the configured processing frequency
+      vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(this->update_interval_ms));
+    }
   }
 }
 
