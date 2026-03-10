@@ -22,12 +22,9 @@ camera_light_sensor:
   # Optional: If provided, starts a web server on this port.
   # Visiting http://<device_ip>:<port>/ serves a snapshot for ROI alignment.
   port: 8080
-  # Optional: The frequency at which the camera captures and analyzes a frame.
-  # Defaults to 500ms (2Hz). Increasing this saves power.
-  update_interval: 1s
-  # Optional: Enables ESP32 Light Sleep between captures to save power.
-  # Recommended for update_intervals > 1s. Defaults to false.
-  light_sleep: true
+  # Optional: Heartbeat interval for all sensors. State changes are
+  # pushed immediately (twice per second) regardless of this.
+  update_interval: 10s
 ```
 
 - **`id`** (Required, ID): The ID for this hub, to be referenced by the binary
@@ -35,13 +32,9 @@ camera_light_sensor:
 - **`port`** (Optional, Port): If provided, starts a web server on this port.
   Visiting `http://<device_ip>:<port>/` will serve a JPEG snapshot from the
   camera. Useful for aligning the regions of interest (ROI).
-- **`update_interval`** (Optional, Time): The frequency at which the camera
-  captures and analyzes a frame. Defaults to `500ms`. Increasing this (e.g., to
-  `5s`) significantly reduces CPU usage and power consumption.
-- **`light_sleep`** (Optional, Boolean): If enabled, the ESP32 will enter Light
-  Sleep mode between captures. This maintains the WiFi connection but drops
-  power consumption dramatically. Recommended when `update_interval` is `1s` or
-  greater.
+- **`update_interval`** (Optional, Time): How often the sensors should refresh
+  their state in Home Assistant. Defaults to `10s`. Note: State changes are
+  "pushed" immediately (twice per second) regardless of this interval.
 - **Note:** Do not provide a `name` for the hub, as it is a coordinator and
   should not be exposed as a separate entity in Home Assistant.
 
@@ -75,21 +68,16 @@ binary_sensor:
 ## How it Works
 
 1. **Background Task:** The hub spawns a FreeRTOS task that captures a camera
-   frame at the frequency specified by `update_interval`.
-2. **Efficiency Optimizations:**
-   - **Buffer Reuse:** The system reuses a single RGB buffer in PSRAM to avoid
-     frequent allocation overhead.
-   - **Light Sleep:** If enabled, the system enters a low-power state between
-     captures.
-3. **HSV Conversion:** Each pixel in the ROI is converted from RGB to the HSV
+   frame every 500ms.
+2. **HSV Conversion:** Each pixel in the ROI is converted from RGB to the HSV
    (Hue, Saturation, Value) colorspace.
-4. **Circular Averaging:** The Hue values are averaged using vector math
+3. **Circular Averaging:** The Hue values are averaged using vector math
    (sin/cos) to correctly handle the 0/360° wraparound.
-5. **Matching:** The average color of the region is compared against the target
+4. **Matching:** The average color of the region is compared against the target
    color. A match is found if:
     - The Hue is within ~20 degrees.
     - The Saturation and Value are within reasonable tolerances.
-6. **Immediate Push:** If a state change is detected, it is pushed to Home
+5. **Immediate Push:** If a state change is detected, it is pushed to Home
    Assistant immediately from the main execution loop.
 
 ## Calibration Tip
