@@ -61,7 +61,7 @@ camera_light_sensor:
   update_interval: 10s
   # Optional: If true, the ESP32 enters Light Sleep between captures
   # to save power. Sleep duration is based on the camera's idle_framerate.
-  light_sleep: false
+  light_sleep: true
 
 binary_sensor:
   - platform: camera_light_sensor

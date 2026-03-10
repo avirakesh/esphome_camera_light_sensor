@@ -56,7 +56,7 @@ void CameraLightSensor::set_sensor_info(std::string name,
   memcpy(this->roi, box.data(), sizeof(this->roi));
   this->expected_hsv = CameraLightSensorHub::rgb_to_hsv(color[0], color[1], color[2]);
 
-  ESP_LOGI(TAG, "Sensor '%s' configured with Target HSV(%d, %d, %d)", this->name.c_str(),
+  ESP_LOGV(TAG, "Sensor '%s' configured with Target HSV(%d, %d, %d)", this->name.c_str(),
            this->expected_hsv.h, this->expected_hsv.s, this->expected_hsv.v);
 }
 
@@ -64,11 +64,11 @@ void CameraLightSensor::set_sensor_info(std::string name,
  * @brief Sets up the snapshot server and background task.
  */
 void CameraLightSensorHub::setup() {
-  ESP_LOGI(TAG, "Setting up Camera Light Sensor Hub. Heartbeat: %ums, Light Sleep: %s, Capture Interval: %ums",
+  ESP_LOGV(TAG, "Setting up Camera Light Sensor Hub. Heartbeat: %ums, Light Sleep: %s, Capture Interval: %ums",
            this->update_interval_ms, this->light_sleep ? "YES" : "NO", this->capture_interval_ms);
 
   if (this->port > 0) {
-    ESP_LOGI(TAG, "Setting up Camera Light Sensor Hub on port %d", this->port);
+    ESP_LOGV(TAG, "Setting up Camera Light Sensor Hub on port %d", this->port);
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.server_port = this->port;
     config.max_uri_handlers = 2;
@@ -79,12 +79,12 @@ void CameraLightSensorHub::setup() {
 
     if (httpd_start(&camera_httpd, &config) == ESP_OK) {
       httpd_register_uri_handler(camera_httpd, &snapshot_uri);
-      ESP_LOGI(TAG, "Snapshot server started on port %d", this->port);
+      ESP_LOGV(TAG, "Snapshot server started on port %d", this->port);
     } else {
       ESP_LOGE(TAG, "Failed to start HTTP server");
     }
   } else {
-    ESP_LOGI(TAG, "Snapshot server disabled (no port configured)");
+    ESP_LOGV(TAG, "Snapshot server disabled (no port configured)");
   }
 
   // Create the background task pinned to Core 1 to avoid interference with the main ESPHome loop
@@ -99,7 +99,6 @@ void CameraLightSensorHub::setup() {
  */
 void CameraLightSensorHub::loop() {
   if (this->data_ready.exchange(false)) {
-    ESP_LOGI(TAG, "New camera data ready, updating sensors...");
     for (auto* s : sensors) {
       bool latest = s->get_latest_state();
       // Only publish if the state has changed or hasn't been set yet
