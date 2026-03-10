@@ -17,7 +17,7 @@ CameraLightSensorHub = camera_light_sensor_ns.class_(
 CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(CameraLightSensorHub),
-        cv.Optional(CONF_PORT, default=8080): cv.port,
+        cv.Optional(CONF_PORT): cv.port,
     }
 ).extend(cv.polling_component_schema("10s"))
 

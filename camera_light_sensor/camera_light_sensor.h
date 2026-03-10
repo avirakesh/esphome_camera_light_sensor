@@ -122,7 +122,7 @@ class CameraLightSensorHub : public PollingComponent {
 
  private:
   std::vector<CameraLightSensor*> sensors;  ///< List of managed sensors.
-  uint16_t port = 8080;                     ///< Snapshot HTTP server port.
+  uint16_t port = 0;                        ///< Snapshot HTTP server port (0 = disabled).
   httpd_handle_t camera_httpd = NULL;       ///< Handle for the snapshot server.
   TaskHandle_t task_handle = NULL;          ///< Handle for the background task.
   std::atomic<bool> data_ready{false};      ///< Flag signaling new processing results are ready.

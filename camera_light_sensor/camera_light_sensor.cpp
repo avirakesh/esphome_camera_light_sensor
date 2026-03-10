@@ -62,20 +62,24 @@ void CameraLightSensor::set_sensor_info(std::string name,
  * @brief Sets up the snapshot server and background task.
  */
 void CameraLightSensorHub::setup() {
-  ESP_LOGI(TAG, "Setting up Camera Light Sensor Hub on port %d", this->port);
-  httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-  config.server_port = this->port;
-  config.max_uri_handlers = 2;
+  if (this->port > 0) {
+    ESP_LOGI(TAG, "Setting up Camera Light Sensor Hub on port %d", this->port);
+    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    config.server_port = this->port;
+    config.max_uri_handlers = 2;
 
-  // URI handler for the root path to serve snapshots
-  httpd_uri_t snapshot_uri = {
-      .uri = "/", .method = HTTP_GET, .handler = capture_handler, .user_ctx = this};
+    // URI handler for the root path to serve snapshots
+    httpd_uri_t snapshot_uri = {
+        .uri = "/", .method = HTTP_GET, .handler = capture_handler, .user_ctx = this};
 
-  if (httpd_start(&camera_httpd, &config) == ESP_OK) {
-    httpd_register_uri_handler(camera_httpd, &snapshot_uri);
-    ESP_LOGI(TAG, "Snapshot server started on port %d", this->port);
+    if (httpd_start(&camera_httpd, &config) == ESP_OK) {
+      httpd_register_uri_handler(camera_httpd, &snapshot_uri);
+      ESP_LOGI(TAG, "Snapshot server started on port %d", this->port);
+    } else {
+      ESP_LOGE(TAG, "Failed to start HTTP server");
+    }
   } else {
-    ESP_LOGE(TAG, "Failed to start HTTP server");
+    ESP_LOGI(TAG, "Snapshot server disabled (no port configured)");
   }
 
   // Create the background task pinned to Core 1 to avoid interference with the main ESPHome loop
