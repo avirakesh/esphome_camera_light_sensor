@@ -55,8 +55,21 @@ void CameraLightSensor::set_sensor_info(std::string name,
   memcpy(this->roi, box.data(), sizeof(this->roi));
   this->expected_hsv = CameraLightSensorHub::rgb_to_hsv(color[0], color[1], color[2]);
 
+  // Update cached values
+  this->expected_v_f = (float)this->expected_hsv.v;
+  this->expected_s_f = (float)this->expected_hsv.s;
+  this->expected_h_angle = this->expected_hsv.h * (2.0f * M_PI / 256.0f);
+
   ESP_LOGV(TAG, "Sensor '%s' configured with Target HSV(%d, %d, %d)", this->name.c_str(),
            this->expected_hsv.h, this->expected_hsv.s, this->expected_hsv.v);
+}
+
+/**
+ * @brief Sets the match radius and updates the cached squared value.
+ */
+void CameraLightSensor::set_match_radius(float radius) {
+  this->match_radius = radius;
+  this->match_radius_sq = radius * radius;
 }
 
 /**
@@ -183,7 +196,6 @@ void CameraLightSensorHub::process_camera() {
   // Analyze each ROI for its average color in HSV space
   for (auto* s : sensors) {
     uint32_t* roi = s->get_roi();
-    HSV expected = s->get_expected_hsv();
 
     uint32_t x1 = std::max((uint32_t)0, roi[0]);
     uint32_t y1 = std::max((uint32_t)0, roi[1]);
@@ -217,25 +229,32 @@ void CameraLightSensorHub::process_camera() {
       if (avg_h_angle < 0) avg_h_angle += 2.0f * M_PI;
       uint8_t avg_h = static_cast<uint8_t>(avg_h_angle * (256.0f / (2.0f * M_PI)));
 
-      uint8_t avg_s = s_sum / count;
-      uint8_t avg_v = v_sum / count;
+      float avg_s = (float)s_sum / count;
+      float avg_v = (float)v_sum / count;
 
-      // Match logic:
-      // 1. Hue distance (circular)
-      int h_dist = std::abs((int)avg_h - (int)expected.h);
-      if (h_dist > 128) h_dist = 256 - h_dist;
+      // Weighted match logic in cylindrical HSV space
+      float delta_v = avg_v - s->get_expected_v_f();
+      float delta_s = avg_s - s->get_expected_s_f();
 
-      // 2. Saturation and Value distance
-      int s_dist = std::abs((int)avg_s - (int)expected.s);
-      int v_dist = std::abs((int)avg_v - (int)expected.v);
+      float s1 = avg_s;
+      float s2 = s->get_expected_s_f();
+      float delta_h_term =
+          2.0f * s1 * s2 * (1.0f - std::cos(avg_h_angle - s->get_expected_h_angle()));
 
-      // Thresholds (scaled to 0-255):
-      // Hue threshold ~20 degrees (256 * 20 / 360 = 14)
-      bool hue_match = h_dist <= 14;
-      // Saturation/Value threshold (flexible to allow for lighting changes)
-      bool sv_match = s_dist <= 40 && v_dist <= 60;
+      // dist_sq = w_v * (V1-V2)^2 + w_s * (S1-S2)^2 + w_h * (2*S1*S2*(1-cos(H1-H2)))
+      float dist_sq = s->get_value_weight() * (delta_v * delta_v) +
+                      s->get_saturation_weight() * (delta_s * delta_s) +
+                      s->get_hue_weight() * delta_h_term;
 
-      s->set_latest_state(hue_match && sv_match);
+      float dist = std::sqrt(std::max(0.0f, dist_sq));
+
+      ESP_LOGD(TAG,
+               "Sensor '%s': Current HSV(%d, %.1f, %.1f), Target HSV(%d, %.1f, %.1f), Weighted "
+               "Dist: %.2f, Radius: %.2f",
+               s->get_name().c_str(), avg_h, avg_s, avg_v, s->get_expected_hsv().h, s2,
+               s->get_expected_v_f(), dist, s->get_match_radius());
+
+      s->set_latest_state(dist_sq <= s->get_match_radius_sq());
     }
   }
 

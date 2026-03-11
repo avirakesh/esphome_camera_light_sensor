@@ -58,6 +58,15 @@ binary_sensor:
         box: [927, 292, 930, 295]
         # The target color in RGB [R, G, B].
         expected_color: [255, 0, 0]
+        # Optional: Custom thresholds for color matching.
+        threshold:
+          # This is the Euclidean distance in the HSV cone.
+          match_radius: 50.0       # Default: 50.0
+          # Weights for matching components.
+          # Higher weights make the component more strict.
+          hue_weight: 3.0          # Default: 3.0
+          saturation_weight: 1.0   # Default: 1.0
+          value_weight: 1.0        # Default: 1.0
 ```
 
 - **`camera_light_sensor_id`** (Required, ID): The ID of the hub configured
@@ -68,6 +77,12 @@ binary_sensor:
     `[x1, y1, x2, y2]`.
   - **`expected_color`** (Required, List of 3 ints): The target color in RGB
     `[R, G, B]`. This is internally converted to HSV for robust matching.
+  - **`threshold`** (Optional, Object): Matching tolerance settings.
+    - **`match_radius`** (Optional, float): The matching tolerance as a radius in
+      the HSV cylindrical space. Defaults to `50.0`.
+    - **`hue_weight`** (Optional, float): Weight for Hue strictness. Defaults to `3.0`.
+    - **`saturation_weight`** (Optional, float): Weight for Saturation strictness. Defaults to `1.0`.
+    - **`value_weight`** (Optional, float): Weight for Value strictness. Defaults to `1.0`.
 
 ## How it Works
 
@@ -79,9 +94,10 @@ binary_sensor:
 3. **Circular Averaging:** The Hue values are averaged using vector math
    (sin/cos) to correctly handle the 0/360° wraparound.
 4. **Matching:** The average color of the region is compared against the target
-   color. A match is found if:
-    - The Hue is within ~20 degrees.
-    - The Saturation and Value are within reasonable tolerances.
+   color using a weighted Euclidean distance in the HSV cylindrical space. A
+   match is found if the distance is less than or equal to the `match_radius`.
+   The Hue component is weighted more heavily by default to ensure precise color
+   matching.
 5. **Immediate Push:** If a state change is detected, it is pushed to Home
    Assistant immediately from the main execution loop.
 

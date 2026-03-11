@@ -77,6 +77,9 @@ binary_sensor:
       - name: "Surface Warm"
         box: [820, 477, 824, 481]
         expected_color: [236, 236, 236]  # White/Gray
+        # Example of custom match radius for a tricky surface
+        threshold:
+          match_radius: 60.0
 
 # Enables logging over Serial/USB for debugging and monitoring
 # the image processing performance.

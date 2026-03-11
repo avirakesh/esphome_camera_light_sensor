@@ -46,12 +46,44 @@ class CameraLightSensor : public binary_sensor::BinarySensor {
    */
   void set_sensor_info(std::string name, std::vector<uint32_t> box, std::vector<uint8_t> color);
 
+  /**
+   * @brief Sets the matching radius for the HSV space distance.
+   * @param radius Euclidean distance radius in HSV space.
+   */
+  void set_match_radius(float radius);
+
+  /**
+   * @brief Sets the weights for the distance calculation.
+   * @param h Hue weight.
+   * @param s Saturation weight.
+   * @param v Value weight.
+   */
+  void set_weights(float h, float s, float v) {
+    this->hue_weight = h;
+    this->saturation_weight = s;
+    this->value_weight = v;
+  }
+
   /// @return The sensor's name.
   std::string get_name() const { return name; }
   /// @return Pointer to the ROI array [x1, y1, x2, y2].
   uint32_t* get_roi() { return roi; }
   /// @return The expected HSV target.
   HSV get_expected_hsv() const { return expected_hsv; }
+
+  /// @return Match radius in HSV space.
+  float get_match_radius() const { return match_radius; }
+
+  /// Cached values for optimized matching
+  float get_expected_v_f() const { return expected_v_f; }
+  float get_expected_s_f() const { return expected_s_f; }
+  float get_expected_h_angle() const { return expected_h_angle; }
+  float get_match_radius_sq() const { return match_radius_sq; }
+
+  /// Weight accessors
+  float get_hue_weight() const { return hue_weight; }
+  float get_saturation_weight() const { return saturation_weight; }
+  float get_value_weight() const { return value_weight; }
 
   /**
    * @brief Updates the most recently calculated state from the background task.
@@ -71,6 +103,19 @@ class CameraLightSensor : public binary_sensor::BinarySensor {
   std::string name;                       ///< Display name of the sensor.
   uint32_t roi[4];                        ///< Region of Interest: [x1, y1, x2, y2].
   HSV expected_hsv;                       ///< Expected color in HSV.
+  float match_radius = 50.0f;             ///< Euclidean distance radius in HSV space.
+
+  // Weights for distance components
+  float hue_weight = 3.0f;
+  float saturation_weight = 1.0f;
+  float value_weight = 1.0f;
+
+  // Cached for performance
+  float expected_v_f = 0.0f;
+  float expected_s_f = 0.0f;
+  float expected_h_angle = 0.0f;
+  float match_radius_sq = 2500.0f;
+
   std::atomic<bool> latest_state{false};  ///< Thread-safe storage for the latest calculated state.
 };
 

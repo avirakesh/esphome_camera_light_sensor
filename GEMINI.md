@@ -31,7 +31,7 @@ HSV-based matching.
   main loop MUST use `std::atomic` variables.
 - **Memory Management:** High-resolution frame buffers and RGB conversions MUST
   use **PSRAM** allocation via `heap_caps_malloc(..., MALLOC_CAP_SPIRAM)`.
-- **Power Efficiency:** 
+- **Power Efficiency:**
   - **Buffer Reuse:** A persistent RGB buffer in PSRAM MUST be used to avoid
     frequent allocation/deallocation overhead.
   - **Capture Frequency:** The background task frequency is automatically
@@ -44,10 +44,14 @@ HSV-based matching.
 - **HSV Mapping:** RGB to HSV conversion maps Hue to **0-255** (0-360°).
 - **Circular Averaging:** You MUST use vector math (averaging `sin` and `cos`
   components) for Hue to correctly handle the 0/255 wraparound.
-- **Thresholds (Tuned for LEDs):**
-  - Hue: $\leq 14$ (~20°).
-  - Saturation: $\leq 40$.
-  - Value: $\leq 60$.
+- **Weighted Euclidean Matching:** Color matching uses Euclidean distance in the HSV
+  cylindrical space with configurable component weights.
+- **Configurable Radius & Weights (Nested under `threshold`):**
+  - `match_radius`: $\leq 50.0$ by default.
+  - `hue_weight`: $3.0$ by default (stricter matching).
+  - `saturation_weight`: $1.0$ by default.
+  - `value_weight`: $1.0$ by default.
+  - All parameters are configurable per sensor via YAML under the `threshold` key.
 
 ### Component Structure
 - **Hub (`CameraLightSensorHub`):** Manages the camera, background task, and
