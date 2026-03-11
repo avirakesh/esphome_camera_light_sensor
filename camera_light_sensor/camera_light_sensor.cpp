@@ -1,6 +1,5 @@
 #include "camera_light_sensor.h"
 #include <cmath>
-#include "esp_sleep.h"
 #include "esphome/components/esp32_camera/esp32_camera.h"
 #include "esphome/core/log.h"
 
@@ -64,8 +63,8 @@ void CameraLightSensor::set_sensor_info(std::string name,
  * @brief Sets up the snapshot server and background task.
  */
 void CameraLightSensorHub::setup() {
-  ESP_LOGV(TAG, "Setting up Camera Light Sensor Hub. Heartbeat: %ums, Light Sleep: %s, Capture Interval: %ums",
-           this->update_interval_ms, this->light_sleep ? "YES" : "NO", this->capture_interval_ms);
+  ESP_LOGV(TAG, "Setting up Camera Light Sensor Hub. Heartbeat: %ums, Capture Interval: %ums",
+           this->update_interval_ms, this->capture_interval_ms);
 
   if (this->port > 0) {
     ESP_LOGV(TAG, "Setting up Camera Light Sensor Hub on port %d", this->port);
@@ -103,6 +102,7 @@ void CameraLightSensorHub::loop() {
       bool latest = s->get_latest_state();
       // Only publish if the state has changed or hasn't been set yet
       if (!s->has_state() || s->state != latest) {
+        ESP_LOGV(TAG, "Sensor '%s' state changed to %s", s->get_name().c_str(), ONOFF(latest));
         s->publish_state(latest);
       }
     }
@@ -114,7 +114,9 @@ void CameraLightSensorHub::loop() {
  */
 void CameraLightSensorHub::update() {
   for (auto* s : sensors) {
-    s->publish_state(s->get_latest_state());
+    bool latest = s->get_latest_state();
+    ESP_LOGV(TAG, "Sensor '%s' heartbeat push: %s", s->get_name().c_str(), ONOFF(latest));
+    s->publish_state(latest);
   }
 }
 
@@ -129,20 +131,8 @@ void CameraLightSensorHub::task_loop() {
 
     uint32_t interval = this->capture_interval_ms > 0 ? this->capture_interval_ms : this->update_interval_ms;
 
-    if (this->light_sleep && interval > 100) {
-      // Use ESP32 Light Sleep to conserve power between captures.
-      // We sleep for the specified capture interval.
-      // Subtracting a small buffer to account for capture/processing overhead.
-      uint32_t sleep_ms = interval - 50;
-      esp_sleep_enable_timer_wakeup(sleep_ms * 1000ULL);
-      esp_light_sleep_start();
-
-      // Resync the FreeRTOS tick count after sleep
-      last_wake_time = xTaskGetTickCount();
-    } else {
-      // Precisely timed delay to maintain the configured processing frequency
-      vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(interval));
-    }
+    // Precisely timed delay to maintain the configured processing frequency
+    vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(interval));
   }
 }
 

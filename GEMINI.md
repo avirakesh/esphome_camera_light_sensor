@@ -37,10 +37,6 @@ HSV-based matching.
   - **Capture Frequency:** The background task frequency is automatically
     synchronized with the camera's `idle_framerate` via the mandatory
     `camera_id` link.
-  - **Light Sleep:** Triggered when the `light_sleep` boolean is `true`. This
-    allows the device to conserve power between captures.
-  - **Sleep Management:** Ensure the Light Sleep wakeup timer accounts for task
-    execution time to prevent interval drift.
 
 ## Implementation Details
 

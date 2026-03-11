@@ -112,12 +112,6 @@ class CameraLightSensorHub : public PollingComponent {
    */
   void set_capture_interval_ms(uint32_t ms) { this->capture_interval_ms = ms; }
 
-  /**
-   * @brief Enables or disables Light Sleep between captures.
-   * @param enable True to enable Light Sleep.
-   */
-  void set_light_sleep(bool enable) { this->light_sleep = enable; }
-
   /// @return Setup priority; ensures Wi-Fi is up before starting HTTP server.
   float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
 
@@ -155,7 +149,6 @@ class CameraLightSensorHub : public PollingComponent {
   uint16_t port = 0;                        ///< Snapshot HTTP server port (0 = disabled).
   uint32_t update_interval_ms = 500;        ///< Interval between captures in ms.
   uint32_t capture_interval_ms = 0;         ///< Interval between captures (auto-derived).
-  bool light_sleep = false;                 ///< Whether to use light sleep between captures.
   uint8_t* rgb_buffer = nullptr;            ///< Persistent RGB888 buffer in PSRAM.
   size_t rgb_buffer_capacity = 0;           ///< Current capacity of the RGB buffer.
   httpd_handle_t camera_httpd = NULL;       ///< Handle for the snapshot server.

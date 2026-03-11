@@ -26,9 +26,6 @@ camera_light_sensor:
   # Optional: Heartbeat interval for all sensors. State changes are
   # pushed immediately regardless of this. Defaults to 10s.
   update_interval: 10s
-  # Optional: If true, the ESP32 enters Light Sleep between captures
-  # to save power.
-  light_sleep: true
 ```
 
   - **`id`** (Required, ID): The ID for this hub, to be referenced by the binary
@@ -42,8 +39,6 @@ camera_light_sensor:
   - **`update_interval`** (Optional, Time): The heartbeat interval for syncing
   state with Home Assistant. Note: State changes are still pushed immediately
   upon detection. Defaults to `10s`.
-  - **`light_sleep`** (Optional, Boolean): If enabled, the ESP32 will enter
-    **Light Sleep** between captures to save power.
   - **Note:** Do not provide a `name` for the hub, as it is a coordinator and
   should not be exposed as a separate entity in Home Assistant.
 

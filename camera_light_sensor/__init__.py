@@ -5,7 +5,6 @@ from esphome.core import CORE
 
 # Shared keys
 CONF_CAMERA_LIGHT_SENSOR_ID = "camera_light_sensor_id"
-CONF_LIGHT_SLEEP = "light_sleep"
 CONF_CAMERA_ID = "camera_id"
 
 # Define the C++ namespace for your component
@@ -22,7 +21,6 @@ CONFIG_SCHEMA = cv.Schema(
         cv.GenerateID(): cv.declare_id(CameraLightSensorHub),
         cv.Required(CONF_CAMERA_ID): cv.use_id(cg.EntityBase), # Simplified for now, will refine if needed
         cv.Optional(CONF_PORT): cv.port,
-        cv.Optional(CONF_LIGHT_SLEEP, default=False): cv.boolean,
     }
 ).extend(cv.polling_component_schema("10s"))
 
@@ -53,5 +51,3 @@ async def to_code(config):
             if idle_fps > 0:
                 idle_ms = int(1000.0 / idle_fps)
                 cg.add(hub_var.set_capture_interval_ms(idle_ms))
-
-    cg.add(hub_var.set_light_sleep(config[CONF_LIGHT_SLEEP]))

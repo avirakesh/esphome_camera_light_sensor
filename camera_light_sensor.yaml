@@ -59,9 +59,6 @@ camera_light_sensor:
   # Optional: Heartbeat interval for all sensors. State changes are
   # pushed immediately regardless of this.
   update_interval: 10s
-  # Optional: If true, the ESP32 enters Light Sleep between captures
-  # to save power. Sleep duration is based on the camera's idle_framerate.
-  light_sleep: true
 
 binary_sensor:
   - platform: camera_light_sensor
