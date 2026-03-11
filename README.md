@@ -38,7 +38,7 @@ camera_light_sensor:
   camera. Useful for aligning the regions of interest (ROI).
   - **`update_interval`** (Optional, Time): The heartbeat interval for syncing
   state with Home Assistant. Note: State changes are still pushed immediately
-  upon detection. Defaults to `10s`.
+  upon detection. Defaults to `10min`.
   - **Note:** Do not provide a `name` for the hub, as it is a coordinator and
   should not be exposed as a separate entity in Home Assistant.
 

@@ -22,7 +22,7 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Required(CONF_CAMERA_ID): cv.use_id(cg.EntityBase), # Simplified for now, will refine if needed
         cv.Optional(CONF_PORT): cv.port,
     }
-).extend(cv.polling_component_schema("10s"))
+).extend(cv.polling_component_schema("10min"))
 
 async def to_code(config):
     hub_var = cg.new_Pvariable(config[CONF_ID])

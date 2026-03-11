@@ -58,7 +58,7 @@ camera_light_sensor:
   port: 8080
   # Optional: Heartbeat interval for all sensors. State changes are
   # pushed immediately regardless of this.
-  update_interval: 10s
+  update_interval: 10min
 
 binary_sensor:
   - platform: camera_light_sensor
