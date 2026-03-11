@@ -84,6 +84,29 @@ binary_sensor:
     - **`saturation_weight`** (Optional, float): Weight for Saturation strictness. Defaults to `1.0`.
     - **`value_weight`** (Optional, float): Weight for Value strictness. Defaults to `1.0`.
 
+## Weighting HSV Components
+
+The component uses a weighted Euclidean distance in the HSV cylindrical space
+to determine if the captured color matches the target. Adjusting the weights
+allows you to tune the sensor's sensitivity to different aspects of the color.
+
+- **`hue_weight`**: Controls sensitivity to color changes (e.g., Red vs. Orange).
+  A higher weight makes the sensor more selective about the exact color hue.
+- **`saturation_weight`**: Controls sensitivity to color purity (e.g., Red vs.
+  Pink/White). Useful for distinguishing a colored LED from white ambient light.
+- **`value_weight`**: Controls sensitivity to brightness. Lowering this weight
+  makes the sensor more robust against shadows or changes in ambient lighting
+  that affect brightness but not the color itself.
+
+### Example Scenarios
+
+| Scenario                           | Recommended Tuning                   | Why?                                                                                                         |
+| :--------------------------------- | :----------------------------------- | :----------------------------------------------------------------------------------------------------------- |
+| **Differentiating Red vs. Orange** | High `hue_weight` (e.g., 5.0)        | Ensures the sensor only triggers for the exact hue, even if brightness is similar.                           |
+| **Variable Ambient Lighting**      | Low `value_weight` (e.g., 0.2)       | Makes the sensor ignore changes in brightness caused by external light or shadows.                           |
+| **Faint LED in Bright Room**       | High `saturation_weight` (e.g., 3.0) | Helps distinguish the saturated color of the LED from the desaturated white/grey background.                 |
+| **Night Monitoring**               | Balanced `value_weight`              | In very dark environments, the "Value" (brightness) is often the most reliable indicator of an LED being ON. |
+
 ## How it Works
 
 1. **Background Task:** The hub spawns a FreeRTOS task that captures and

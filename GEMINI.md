@@ -52,6 +52,7 @@ HSV-based matching.
   - `saturation_weight`: $1.0$ by default.
   - `value_weight`: $1.0$ by default.
   - All parameters are configurable per sensor via YAML under the `threshold` key.
+  - Detailed tuning examples are provided in `README.md`.
 
 ### Component Structure
 - **Hub (`CameraLightSensorHub`):** Manages the camera, background task, and
