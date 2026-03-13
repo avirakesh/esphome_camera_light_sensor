@@ -170,3 +170,7 @@ Enable the `port` option during setup. Open the snapshot in a browser and use
 an image editor or online tool to find the exact pixel coordinates `[x1, y1,
 x2, y2]` for the LED you want to monitor. Once calibrated, you can remove the
 `port` configuration to save resources.
+
+---
+
+**Disclaimer:** This project was developed and refined with the assistance of AI.
