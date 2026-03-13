@@ -19,7 +19,7 @@ CameraLightSensorHub = camera_light_sensor_ns.class_(
 CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(CameraLightSensorHub),
-        cv.Required(CONF_CAMERA_ID): cv.use_id(cg.EntityBase), # Simplified for now, will refine if needed
+        cv.Required(CONF_CAMERA_ID): cv.use_id(cg.EntityBase),
         cv.Optional(CONF_PORT): cv.port,
     }
 ).extend(cv.polling_component_schema("10min"))
@@ -45,7 +45,7 @@ async def to_code(config):
             cam_block = next((c for c in cam_conf if c.get(CONF_ID) == config[CONF_CAMERA_ID]), None)
         else:
             cam_block = cam_conf if cam_conf.get(CONF_ID) == config[CONF_CAMERA_ID] else None
-        
+
         if cam_block and "idle_framerate" in cam_block:
             idle_fps = cam_block["idle_framerate"]
             if idle_fps > 0:

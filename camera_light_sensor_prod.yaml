@@ -83,7 +83,7 @@ binary_sensor:
       - name: "Stove Burner On"
         # ROI: [x1, y1, x2, y2]
         box: [927, 292, 931, 296]
-        # Matching always occurs in HSV space for robustness.
+        # Matching always occurs in HSV space.
         # Use RGB for convenience:
         expected_color: [255, 0, 0]
         threshold:

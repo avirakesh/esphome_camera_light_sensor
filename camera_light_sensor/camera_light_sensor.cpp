@@ -10,39 +10,52 @@ namespace camera_light_sensor {
 static const char* const TAG = "camera_light_sensor";
 
 /**
- * @brief Fast integer RGB to HSV conversion.
+ * @brief High-precision RGB to HSV conversion using floating point.
  *
  * Maps Hue to 0-255 (instead of 0-360°) to fit into a single byte.
  */
 HSV CameraLightSensorHub::rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b) {
   HSV hsv;
-  uint8_t min_val = std::min({r, g, b});
-  uint8_t max_val = std::max({r, g, b});
-  uint8_t delta = max_val - min_val;
+  float rf = r / 255.0f;
+  float gf = g / 255.0f;
+  float bf = b / 255.0f;
 
-  hsv.v = max_val;
-  if (max_val == 0) {
+  float max_val = std::max({rf, gf, bf});
+  float min_val = std::min({rf, gf, bf});
+  float delta = max_val - min_val;
+
+  hsv.v = static_cast<uint8_t>(std::round(max_val * 255.0f));
+
+  if (max_val == 0.0f) {
     hsv.s = 0;
     hsv.h = 0;
     return hsv;
   }
 
-  hsv.s = (255UL * delta) / max_val;
-  if (delta == 0) {
+  hsv.s = static_cast<uint8_t>(std::round((delta / max_val) * 255.0f));
+
+  if (delta == 0.0f) {
     hsv.h = 0;
     return hsv;
   }
 
-  int32_t h;
-  if (max_val == r) {
-    h = 0 + 43 * (g - b) / delta;
-  } else if (max_val == g) {
-    h = 85 + 43 * (b - r) / delta;
+  float h;
+  if (max_val == rf) {
+    h = (gf - bf) / delta;
+  } else if (max_val == gf) {
+    h = 2.0f + (bf - rf) / delta;
   } else {
-    h = 171 + 43 * (r - g) / delta;
+    h = 4.0f + (rf - gf) / delta;
   }
 
-  hsv.h = static_cast<uint8_t>(h);
+  h *= 60.0f;
+  if (h < 0.0f)
+    h += 360.0f;
+
+  // Map 0-360° to 0-255. Use 256.0f as the divisor for circular wrapping (360° -> 256 -> 0).
+  float h_mapped = std::round(h * 256.0f / 360.0f);
+  hsv.h = static_cast<uint8_t>(static_cast<uint32_t>(h_mapped) % 256);
+
   return hsv;
 }
 
@@ -60,7 +73,6 @@ void CameraLightSensor::set_sensor_info(std::string name, std::vector<uint32_t> 
 void CameraLightSensor::set_expected_rgb(uint8_t r, uint8_t g, uint8_t b) {
   this->expected_hsv = CameraLightSensorHub::rgb_to_hsv(r, g, b);
 
-  // Update cached values
   this->expected_v_f = (float)this->expected_hsv.v;
   this->expected_s_f = (float)this->expected_hsv.s;
   this->expected_h_angle = this->expected_hsv.h * (2.0f * M_PI / 256.0f);
@@ -156,7 +168,7 @@ void CameraLightSensorHub::update() {
 }
 
 /**
- * @brief Background task execution loop.
+ * @brief Background task execution loop, responsible for camera capture and processing.
  */
 void CameraLightSensorHub::task_loop() {
   TickType_t last_wake_time = xTaskGetTickCount();
