@@ -47,22 +47,43 @@ HSV CameraLightSensorHub::rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 /**
- * @brief Configures sensor metadata and targets, converting target RGB to HSV.
+ * @brief Configures sensor metadata and ROI.
  */
-void CameraLightSensor::set_sensor_info(std::string name,
-                                        std::vector<uint32_t> box,
-                                        std::vector<uint8_t> color) {
+void CameraLightSensor::set_sensor_info(std::string name, std::vector<uint32_t> box) {
   this->name = name;
   memcpy(this->roi, box.data(), sizeof(this->roi));
-  this->expected_hsv = CameraLightSensorHub::rgb_to_hsv(color[0], color[1], color[2]);
+}
+
+/**
+ * @brief Sets the expected target color using RGB and converts it to HSV.
+ */
+void CameraLightSensor::set_expected_rgb(uint8_t r, uint8_t g, uint8_t b) {
+  this->expected_hsv = CameraLightSensorHub::rgb_to_hsv(r, g, b);
 
   // Update cached values
   this->expected_v_f = (float)this->expected_hsv.v;
   this->expected_s_f = (float)this->expected_hsv.s;
   this->expected_h_angle = this->expected_hsv.h * (2.0f * M_PI / 256.0f);
 
-  ESP_LOGV(TAG, "Sensor '%s' configured with Target HSV(%d, %d, %d)", this->name.c_str(),
-           this->expected_hsv.h, this->expected_hsv.s, this->expected_hsv.v);
+  ESP_LOGV(TAG, "Sensor '%s' configured with Target RGB(%d, %d, %d) -> HSV(%d, %d, %d)",
+           this->name.c_str(), r, g, b, this->expected_hsv.h, this->expected_hsv.s,
+           this->expected_hsv.v);
+}
+
+/**
+ * @brief Sets the expected target color directly using HSV.
+ */
+void CameraLightSensor::set_expected_hsv(uint8_t h, uint8_t s, uint8_t v) {
+  this->expected_hsv.h = h;
+  this->expected_hsv.s = s;
+  this->expected_hsv.v = v;
+
+  // Update cached values
+  this->expected_v_f = (float)v;
+  this->expected_s_f = (float)s;
+  this->expected_h_angle = h * (2.0f * M_PI / 256.0f);
+
+  ESP_LOGV(TAG, "Sensor '%s' configured with Target HSV(%d, %d, %d)", this->name.c_str(), h, s, v);
 }
 
 /**

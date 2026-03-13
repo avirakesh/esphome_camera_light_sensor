@@ -71,15 +71,13 @@ binary_sensor:
         box: [927, 292, 931, 296]
         # The target color in RGB [R, G, B].
         expected_color: [255, 0, 0]  # Red
-      - name: "Surface Hot"
-        box: [300, 300, 304, 304]
-        expected_color: [255, 0, 0]  # Red
-      - name: "Surface Warm"
-        box: [820, 477, 824, 481]
-        expected_color: [236, 236, 236]  # White/Gray
         # Example of custom match radius for a tricky surface
         threshold:
           match_radius: 60.0
+      - name: "Surface Hot"
+        box: [300, 300, 304, 304]
+        # The target color in HSV [H, S, V].
+        expected_hsv: [0, 255, 255]  # Pure Red
 
 # Enables logging over Serial/USB for debugging and monitoring
 # the image processing performance.

@@ -56,8 +56,12 @@ binary_sensor:
       - name: "Stove On LED"
         # The Region of Interest coordinates [x1, y1, x2, y2].
         box: [927, 292, 930, 295]
-        # The target color in RGB [R, G, B].
-        expected_color: [255, 0, 0]
+        # Define the target color using EITHER RGB or HSV.
+        # Regardless of input, matching ALWAYS occurs in the HSV color space.
+        expected_color: [255, 0, 0] # RGB [R, G, B]
+        # OR
+        # expected_hsv: [0, 255, 255] # HSV [H, S, V] (Hue mapped to 0-255)
+
         # Optional: Custom thresholds for color matching.
         threshold:
           # This is the Euclidean distance in the HSV cone.
@@ -75,13 +79,18 @@ binary_sensor:
   - **`name`** (Required, String): The name of the binary sensor.
   - **`box`** (Required, List of 4 ints): The Region of Interest coordinates
     `[x1, y1, x2, y2]`.
-  - **`expected_color`** (Required, List of 3 ints): The target color in RGB
-    `[R, G, B]`. This is internally converted to HSV for robust matching.
+  - **`expected_color`** (Exclusive, List of 3 ints): The target color in RGB
+    `[R, G, B]`. This is internally converted to HSV for matching.
+  - **`expected_hsv`** (Exclusive, List of 3 ints): The target color in HSV
+    `[H, S, V]`. Useful for matching values observed in debug logs.
+  - **Note:** All matching logic is performed in the **HSV color space**.
+    Providing RGB is a convenience; it is converted to HSV during initialization.
   - **`threshold`** (Optional, Object): Matching tolerance settings.
     - **`match_radius`** (Optional, float): The matching tolerance as a radius in
       the HSV cylindrical space. Defaults to `50.0`.
     - **`hue_weight`** (Optional, float): Weight for Hue strictness. Defaults to `3.0`.
-    - **`saturation_weight`** (Optional, float): Weight for Saturation strictness. Defaults to `1.0`.
+    - **`saturation_weight`** (Optional, float): Weight for Saturation strictness.
+      Defaults to `1.0`.
     - **`value_weight`** (Optional, float): Weight for Value strictness. Defaults to `1.0`.
 
 ## Weighting HSV Components

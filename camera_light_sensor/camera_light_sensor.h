@@ -38,13 +38,28 @@ struct HSV {
 class CameraLightSensor : public binary_sensor::BinarySensor {
  public:
   /**
-   * @brief Configures the sensor's region of interest and target color.
+   * @brief Configures the sensor's name and region of interest.
    *
    * @param name The display name of the sensor.
    * @param box Region of Interest: [x1, y1, x2, y2].
-   * @param color Expected color in RGB: [R, G, B].
    */
-  void set_sensor_info(std::string name, std::vector<uint32_t> box, std::vector<uint8_t> color);
+  void set_sensor_info(std::string name, std::vector<uint32_t> box);
+
+  /**
+   * @brief Sets the expected target color using RGB.
+   * @param r Red component (0-255).
+   * @param g Green component (0-255).
+   * @param b Blue component (0-255).
+   */
+  void set_expected_rgb(uint8_t r, uint8_t g, uint8_t b);
+
+  /**
+   * @brief Sets the expected target color using HSV.
+   * @param h Hue component (0-255).
+   * @param s Saturation component (0-255).
+   * @param v Value component (0-255).
+   */
+  void set_expected_hsv(uint8_t h, uint8_t s, uint8_t v);
 
   /**
    * @brief Sets the matching radius for the HSV space distance.

@@ -42,6 +42,7 @@ HSV-based matching.
 
 ### Color Space & Matching
 - **HSV Mapping:** RGB to HSV conversion maps Hue to **0-255** (0-360°).
+- **Dual Input Support:** Expected color can be defined using either `expected_color` (RGB) or `expected_hsv` (HSV).
 - **Circular Averaging:** You MUST use vector math (averaging `sin` and `cos`
   components) for Hue to correctly handle the 0/255 wraparound.
 - **Weighted Euclidean Matching:** Color matching uses Euclidean distance in the HSV
