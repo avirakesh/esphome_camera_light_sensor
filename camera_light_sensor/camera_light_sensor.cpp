@@ -1,4 +1,5 @@
 #include "camera_light_sensor.h"
+#include <esp_timer.h>
 #include <cmath>
 #include "esphome/components/esp32_camera/esp32_camera.h"
 #include "esphome/core/log.h"
@@ -115,7 +116,7 @@ void CameraLightSensorHub::loop() {
       bool latest = s->get_latest_state();
       // Only publish if the state has changed or hasn't been set yet
       if (!s->has_state() || s->state != latest) {
-        ESP_LOGV(TAG, "Sensor '%s' state changed to %s", s->get_name().c_str(), ONOFF(latest));
+        ESP_LOGD(TAG, "Sensor '%s' state changed to %s", s->get_name().c_str(), ONOFF(latest));
         s->publish_state(latest);
       }
     }
@@ -195,6 +196,7 @@ void CameraLightSensorHub::process_camera() {
 
   // Analyze each ROI for its average color in HSV space
   for (auto* s : sensors) {
+    uint32_t start_time = esp_timer_get_time();
     uint32_t* roi = s->get_roi();
 
     uint32_t x1 = std::max((uint32_t)0, roi[0]);
@@ -204,7 +206,7 @@ void CameraLightSensorHub::process_camera() {
 
     float sin_h_sum = 0, cos_h_sum = 0;
     uint32_t s_sum = 0, v_sum = 0;
-    uint32_t count = 0;
+    uint32_t num_pixels = 0;
 
     for (uint32_t y = y1; y < y2; y++) {
       for (uint32_t x = x1; x < x2; x++) {
@@ -219,43 +221,53 @@ void CameraLightSensorHub::process_camera() {
 
         s_sum += hsv.s;
         v_sum += hsv.v;
-        count++;
+        num_pixels++;
       }
     }
 
-    if (count > 0) {
-      // Reconstruct average Hue from vector components
-      float avg_h_angle = std::atan2(sin_h_sum / count, cos_h_sum / count);
-      if (avg_h_angle < 0) avg_h_angle += 2.0f * M_PI;
-      uint8_t avg_h = static_cast<uint8_t>(avg_h_angle * (256.0f / (2.0f * M_PI)));
-
-      float avg_s = (float)s_sum / count;
-      float avg_v = (float)v_sum / count;
-
-      // Weighted match logic in cylindrical HSV space
-      float delta_v = avg_v - s->get_expected_v_f();
-      float delta_s = avg_s - s->get_expected_s_f();
-
-      float s1 = avg_s;
-      float s2 = s->get_expected_s_f();
-      float delta_h_term =
-          2.0f * s1 * s2 * (1.0f - std::cos(avg_h_angle - s->get_expected_h_angle()));
-
-      // dist_sq = w_v * (V1-V2)^2 + w_s * (S1-S2)^2 + w_h * (2*S1*S2*(1-cos(H1-H2)))
-      float dist_sq = s->get_value_weight() * (delta_v * delta_v) +
-                      s->get_saturation_weight() * (delta_s * delta_s) +
-                      s->get_hue_weight() * delta_h_term;
-
-      float dist = std::sqrt(std::max(0.0f, dist_sq));
-
-      ESP_LOGD(TAG,
-               "Sensor '%s': Current HSV(%d, %.1f, %.1f), Target HSV(%d, %.1f, %.1f), Weighted "
-               "Dist: %.2f, Radius: %.2f",
-               s->get_name().c_str(), avg_h, avg_s, avg_v, s->get_expected_hsv().h, s2,
-               s->get_expected_v_f(), dist, s->get_match_radius());
-
-      s->set_latest_state(dist_sq <= s->get_match_radius_sq());
+    if (!num_pixels) {
+      continue;
     }
+
+    // Reconstruct average Hue from vector components
+    float avg_h_angle = std::atan2(sin_h_sum / num_pixels, cos_h_sum / num_pixels);
+    if (avg_h_angle < 0)
+      avg_h_angle += 2.0f * M_PI;
+    uint8_t avg_h = static_cast<uint8_t>(avg_h_angle * (256.0f / (2.0f * M_PI)));
+
+    float avg_s = (float)s_sum / num_pixels;
+    float avg_v = (float)v_sum / num_pixels;
+
+    // Weighted match logic in cylindrical HSV space
+    float delta_v = avg_v - s->get_expected_v_f();
+    float delta_s = avg_s - s->get_expected_s_f();
+
+    float s1 = avg_s;
+    float s2 = s->get_expected_s_f();
+    float delta_h_term =
+        2.0f * s1 * s2 * (1.0f - std::cos(avg_h_angle - s->get_expected_h_angle()));
+
+    // dist_sq = w_v * (V1-V2)^2 + w_s * (S1-S2)^2 + w_h * (2*S1*S2*(1-cos(H1-H2)))
+    float dist_sq = s->get_value_weight() * (delta_v * delta_v) +
+                    s->get_saturation_weight() * (delta_s * delta_s) +
+                    s->get_hue_weight() * delta_h_term;
+
+    float dist = std::sqrt(std::max(0.0f, dist_sq));
+
+    uint32_t end_time = esp_timer_get_time();
+    ESP_LOGD(TAG,
+             "Sensor '%s':\n"
+             "    State: %s,\n"
+             "    Current HSV(%d, %.1f, %.1f),\n"
+             "    Target HSV(%d, %.1f, %.1f),\n"
+             "    Weighted Dist: %.2f,\n"
+             "    Radius: %.2f\n"
+             "    Processed %d pixels in %u us.",
+             s->get_name().c_str(), ONOFF(dist_sq <= s->get_match_radius_sq()), avg_h, avg_s, avg_v,
+             s->get_expected_hsv().h, s2, s->get_expected_v_f(), dist, s->get_match_radius(),
+             num_pixels, (uint32_t)(end_time - start_time));
+
+    s->set_latest_state(dist_sq <= s->get_match_radius_sq());
   }
 
   esp_camera_fb_return(fb);

@@ -71,7 +71,7 @@ HSV-based matching.
 
 1. **Compilation:** Verify changes via `esphome compile camera_light_sensor.yaml`.
 2. **ROI Alignment:** Use the HTTP snapshot server (port 8080) for coordinates.
-3. **Log Monitoring:** Use `VERY_VERBOSE` to observe live HSV calculations.
+3. **Log Monitoring:** Use `DEBUG` or higher to observe sensor calculation times, and `VERY_VERBOSE` for detailed live HSV results.
 
 ## Common Pitfalls
 - **Hub Configuration:** NEVER provide a `name` for the hub in YAML.
