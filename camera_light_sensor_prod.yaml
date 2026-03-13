@@ -1,0 +1,102 @@
+# Production configuration for the ESPHome Camera Light Sensor
+# Reference: https://github.com/avirakesh/esphome_camera_light_sensor
+
+esphome:
+  name: stove-sensor
+  # Friendly name for Home Assistant
+  friendly_name: "Stove Camera Sensor"
+
+# ESP-IDF framework is mandatory for optimal camera stability and PSRAM support.
+esp32:
+  board: esp32cam
+  framework:
+    type: esp-idf
+
+# Core connectivity components
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  platform: esphome
+  password: !secret ota_password
+
+# bluetooth_proxy:
+#   active: true
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback AP in case of Wi-Fi issues
+  # ap:
+  #   ssid: "Stove-Sensor Fallback Hotspot"
+  #   password: !secret ap_password
+
+# Required for image buffering and conversion
+psram:
+
+# Standard ESP32-CAM Pinout
+# Change this to ensure esp32_camera component works correctly with the hardware.
+esp32_camera:
+  id: my_camera
+  external_clock:
+    pin: GPIO0
+    frequency: 20MHz
+  i2c_pins:
+    sda: GPIO26
+    scl: GPIO27
+  data_pins: [GPIO5, GPIO18, GPIO19, GPIO21, GPIO36, GPIO39, GPIO34, GPIO35]
+  vsync_pin: GPIO25
+  href_pin: GPIO23
+  pixel_clock_pin: GPIO22
+  power_down_pin: GPIO32
+  resolution: 1024x768
+  jpeg_quality: 10
+  frame_buffer_count: 2
+  # Processing frequency is derived from this (0.1fps = once every 10 seconds)
+  idle_framerate: 0.1fps
+
+# Point to the official GitHub repository for the component
+external_components:
+  - source:
+      type: git
+      url: https://github.com/avirakesh/esphome_camera_light_sensor
+      ref: main
+
+# Hub configuration
+camera_light_sensor:
+  # No name here as this should not be exposed to Home Assistant directly.
+  id: camera_hub
+  camera_id: my_camera # Must match the ID from esp32_camera above
+  # Port for snapshot alignment server.
+  # Use http://<ip>:8080/ to find ROI coordinates.
+  # port: 8080
+  # Sync state with Home Assistant periodically
+  update_interval: 10min
+
+# Individual ROI sensors
+binary_sensor:
+  - platform: camera_light_sensor
+    camera_light_sensor_id: camera_hub # must match the ID from camera_light_sensor above
+    sensor_roi:
+      - name: "Stove Burner On"
+        # ROI: [x1, y1, x2, y2]
+        box: [927, 292, 931, 296]
+        # Matching always occurs in HSV space for robustness.
+        # Use RGB for convenience:
+        expected_color: [255, 0, 0]
+        threshold:
+          match_radius: 50.0
+
+      - name: "Surface Hot Indicator"
+        box: [300, 300, 304, 304]
+        # Or use direct HSV values for precise tuning:
+        expected_hsv: [0, 255, 255]
+        threshold:
+          match_radius: 60.0
+          hue_weight: 4.0
+
+# Set log level to INFO for production; DEBUG/VERY_VERBOSE for tuning
+logger:
+  level: INFO
