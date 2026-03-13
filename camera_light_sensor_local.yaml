@@ -41,7 +41,7 @@ esp32_camera:
   vertical_flip: false
   horizontal_mirror: false
   frame_buffer_count: 2
-  idle_framerate: 1fps
+  idle_framerate: 0.5fps
 
 # Points ESPHome to the local directory containing the custom
 # camera_light_sensor component code.
