@@ -5,9 +5,6 @@ regions of its field of view and report whether they match a target color. It
 is ideal for detecting status LEDs on appliances like stoves, washing machines,
 or servers.
 
-The component runs image processing in a background FreeRTOS task to ensure the
-main ESPHome loop remains responsive.
-
 ## Configuration
 
 ### Hub Configuration
@@ -24,23 +21,24 @@ camera_light_sensor:
   # Visiting http://<device_ip>:<port>/ serves a snapshot for ROI alignment.
   port: 8080
   # Optional: Heartbeat interval for all sensors. State changes are
-  # pushed immediately regardless of this. Defaults to 10s.
+  # pushed immediately but this serves as a backup. Defaults to 10s.
   update_interval: 10s
 ```
 
   - **`id`** (Required, ID): The ID for this hub, to be referenced by the binary
-  sensors.
+    sensors.
   - **`camera_id`** (Required, ID): The ID of the `esp32_camera` component. The
-  hub automatically synchronizes its capture frequency with the camera's
-  `idle_framerate`.
+    hub automatically synchronizes its capture frequency with the camera's
+    `idle_framerate`.
   - **`port`** (Optional, Port): If provided, starts a web server on this port.
-  Visiting `http://<device_ip>:<port>/` will serve a JPEG snapshot from the
-  camera. Useful for aligning the regions of interest (ROI).
+    Visiting `http://<device_ip>:<port>/` will serve a JPEG snapshot from the
+    camera. Useful for aligning the regions of interest (ROI).
   - **`update_interval`** (Optional, Time): The heartbeat interval for syncing
-  state with Home Assistant. Note: State changes are still pushed immediately
-  upon detection. Defaults to `10min`.
-  - **Note:** Do not provide a `name` for the hub, as it is a coordinator and
-  should not be exposed as a separate entity in Home Assistant.
+    state with Home Assistant. Note: State changes are still pushed immediately
+    upon detection. Defaults to `10min`.
+  - **Note:** Do not provide a `name` for the hub, as it is meant to coordinate
+    the sensors and should not be exposed as a separate entity in Home
+    Assistant.
 
 ### Binary Sensor Configuration
 
@@ -84,14 +82,17 @@ binary_sensor:
   - **`expected_hsv`** (Exclusive, List of 3 ints): The target color in HSV
     `[H, S, V]`. Useful for matching values observed in debug logs.
   - **Note:** All matching logic is performed in the **HSV color space**.
-    Providing RGB is a convenience; it is converted to HSV during initialization.
+    Providing RGB is a convenience; it is converted to HSV during
+    initialization.
   - **`threshold`** (Optional, Object): Matching tolerance settings.
-    - **`match_radius`** (Optional, float): The matching tolerance as a radius in
-      the HSV cylindrical space. Defaults to `50.0`.
-    - **`hue_weight`** (Optional, float): Weight for Hue strictness. Defaults to `3.0`.
-    - **`saturation_weight`** (Optional, float): Weight for Saturation strictness.
+    - **`match_radius`** (Optional, float): The matching tolerance as a radius
+      in the HSV cylindrical space. Defaults to `50.0`.
+    - **`hue_weight`** (Optional, float): Weight for Hue strictness.
+      Defaults to `3.0`.
+    - **`saturation_weight`** (Optional, float): Weight for Saturation
+      strictness. Defaults to `1.0`.
+    - **`value_weight`** (Optional, float): Weight for Value strictness.
       Defaults to `1.0`.
-    - **`value_weight`** (Optional, float): Weight for Value strictness. Defaults to `1.0`.
 
 ## Weighting HSV Components
 
@@ -99,8 +100,38 @@ The component uses a weighted Euclidean distance in the HSV cylindrical space
 to determine if the captured color matches the target. Adjusting the weights
 allows you to tune the sensor's sensitivity to different aspects of the color.
 
-- **`hue_weight`**: Controls sensitivity to color changes (e.g., Red vs. Orange).
-  A higher weight makes the sensor more selective about the exact color hue.
+### The Matching Formula
+
+The distance $d$ between the captured color $(H_1, S_1, V_1)$ and the target
+color $(H_2, S_2, V_2)$ is calculated as:
+
+$$d = \sqrt{w_v(V_1 - V_2)^2 + w_s(S_1 - S_2)^2 + w_h(2S_1S_2(1 - \cos(H_1 - H_2)))}$$
+
+Where:
+- $w_h, w_s, w_v$ are the configured weights for Hue, Saturation, and Value.
+- $H$ is the Hue angle (converted from the 0-255 range to 0-2π).
+- A match is confirmed if $d \leq \text{match\_radius}$.
+
+### Calculation Examples
+
+Assume a target of **Pure Red** (HSV: 0, 255, 255) and default weights
+($w_h=3, w_s=1, w_v=1$):
+
+1.  **Slightly Dimmer Red** (HSV: 0, 255, 200):
+    - $V$ difference is 55. $d = \sqrt{1 \cdot (55)^2} = 55.0$.
+    - With a `match_radius` of 50, this is a **No Match**.
+    - *Tuning Fix:* Lower `value_weight` to 0.1 → $d = \sqrt{0.1 \cdot 3025}
+      \approx 17.4$ (**Match**).
+
+2.  **Slightly Orange Shift** (HSV: 10, 255, 255):
+    - $H$ difference is ~14°. $d = \sqrt{3 \cdot (2 \cdot 255^2 \cdot (1 -
+      \cos(14^\circ)))} \approx 108.5$.
+    - This is a **No Match**.
+    - *Tuning Fix:* Increase `match_radius` to 110 OR lower `hue_weight` to 0.5.
+
+- **`hue_weight`**: Controls sensitivity to color changes (e.g., Red vs.
+  Orange). A higher weight makes the sensor more selective about the exact
+  color hue.
 - **`saturation_weight`**: Controls sensitivity to color purity (e.g., Red vs.
   Pink/White). Useful for distinguishing a colored LED from white ambient light.
 - **`value_weight`**: Controls sensitivity to brightness. Lowering this weight
@@ -109,12 +140,12 @@ allows you to tune the sensor's sensitivity to different aspects of the color.
 
 ### Example Scenarios
 
-| Scenario                           | Recommended Tuning                   | Why?                                                                                                         |
-| :--------------------------------- | :----------------------------------- | :----------------------------------------------------------------------------------------------------------- |
-| **Differentiating Red vs. Orange** | High `hue_weight` (e.g., 5.0)        | Ensures the sensor only triggers for the exact hue, even if brightness is similar.                           |
-| **Variable Ambient Lighting**      | Low `value_weight` (e.g., 0.2)       | Makes the sensor ignore changes in brightness caused by external light or shadows.                           |
-| **Faint LED in Bright Room**       | High `saturation_weight` (e.g., 3.0) | Helps distinguish the saturated color of the LED from the desaturated white/grey background.                 |
-| **Night Monitoring**               | Balanced `value_weight`              | In very dark environments, the "Value" (brightness) is often the most reliable indicator of an LED being ON. |
+| Scenario | Recommended Tuning | Why? |
+| :--- | :--- | :--- |
+| **Differentiating Red vs. Orange** | High `hue_weight` (e.g., 5.0) | Ensures the sensor only triggers for the exact hue, even if brightness is similar. |
+| **Variable Ambient Lighting** | Low `value_weight` (e.g., 0.2) | Makes the sensor ignore changes in brightness caused by external light or shadows. |
+| **Faint LED in Bright Room** | High `saturation_weight` (e.g., 3.0) | Helps distinguish the saturated color of the LED from the desaturated white/grey background. |
+| **Night Monitoring** | Balanced `value_weight` | In very dark environments, the "Value" (brightness) is often the most reliable indicator of an LED being ON. |
 
 ## How it Works
 
@@ -123,8 +154,8 @@ allows you to tune the sensor's sensitivity to different aspects of the color.
    `idle_framerate`.
 2. **HSV Conversion:** Each pixel in the ROI is converted from RGB to the HSV
    (Hue, Saturation, Value) colorspace.
-3. **Circular Averaging:** The Hue values are averaged using vector math
-   (sin/cos) to correctly handle the 0/360° wraparound.
+3. **Circular Averaging:** The Hue values are averaged using vector math to
+   correctly handle the 0/360° wraparound.
 4. **Matching:** The average color of the region is compared against the target
    color using a weighted Euclidean distance in the HSV cylindrical space. A
    match is found if the distance is less than or equal to the `match_radius`.
@@ -135,7 +166,7 @@ allows you to tune the sensor's sensitivity to different aspects of the color.
 
 ## Calibration Tip
 
-Enable the `port` option during setup. Open the snapshot in a browser and use an
-image editor or online tool to find the exact pixel coordinates `[x1, y1, x2,
-y2]` for the LED you want to monitor. Once calibrated, you can remove the
+Enable the `port` option during setup. Open the snapshot in a browser and use
+an image editor or online tool to find the exact pixel coordinates `[x1, y1,
+x2, y2]` for the LED you want to monitor. Once calibrated, you can remove the
 `port` configuration to save resources.
