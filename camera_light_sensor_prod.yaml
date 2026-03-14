@@ -39,7 +39,11 @@ psram:
 # Standard ESP32-CAM Pinout
 # Change this to ensure esp32_camera component works correctly with the hardware.
 esp32_camera:
-  id: my_camera
+  id: stove_camera
+  # Uncommenting will enable the camera feed in Home Assistant.
+  # Uncomment to see the camera feed to figure out ROIs, then comment back out
+  # for resource savings.
+  # name: "Stove Camera"
   external_clock:
     pin: GPIO0
     frequency: 20MHz
@@ -68,10 +72,7 @@ external_components:
 camera_light_sensor:
   # No name here as this should not be exposed to Home Assistant directly.
   id: camera_hub
-  camera_id: my_camera # Must match the ID from esp32_camera above
-  # Port for snapshot alignment server.
-  # Use http://<ip>:8080/ to find ROI coordinates.
-  # port: 8080
+  camera_id: stove_camera # Must match the ID from esp32_camera above
   # Sync state with Home Assistant periodically
   update_interval: 10min
 

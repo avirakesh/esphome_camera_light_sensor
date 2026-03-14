@@ -111,26 +111,6 @@ void CameraLightSensorHub::setup() {
   ESP_LOGV(TAG, "Setting up Camera Light Sensor Hub. Heartbeat: %ums, Capture Interval: %ums",
            this->update_interval_ms, this->capture_interval_ms);
 
-  if (this->port > 0) {
-    ESP_LOGV(TAG, "Setting up Camera Light Sensor Hub on port %d", this->port);
-    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.server_port = this->port;
-    config.max_uri_handlers = 2;
-
-    // URI handler for the root path to serve snapshots
-    httpd_uri_t snapshot_uri = {
-        .uri = "/", .method = HTTP_GET, .handler = capture_handler, .user_ctx = this};
-
-    if (httpd_start(&camera_httpd, &config) == ESP_OK) {
-      httpd_register_uri_handler(camera_httpd, &snapshot_uri);
-      ESP_LOGV(TAG, "Snapshot server started on port %d", this->port);
-    } else {
-      ESP_LOGE(TAG, "Failed to start HTTP server");
-    }
-  } else {
-    ESP_LOGV(TAG, "Snapshot server disabled (no port configured)");
-  }
-
   // Create the background task pinned to Core 1 to avoid interference with the main ESPHome loop
   xTaskCreatePinnedToCore(CameraLightSensorHub::task_wrapper, "camera_task", 8192, this, 1,
                           &this->task_handle, 1);
@@ -199,12 +179,12 @@ void CameraLightSensorHub::process_camera() {
   if (fb->format != PIXFORMAT_RGB888) {
     if (this->rgb_buffer == nullptr) {
       ESP_LOGV(TAG, "Allocating initial RGB buffer in PSRAM");
-      usize_t frame_size = fb->width * fb->height * 3;
+      size_t frame_size = fb->width * fb->height * 3;
       this->rgb_buffer = (uint8_t*)heap_caps_malloc(frame_size, MALLOC_CAP_SPIRAM);
       if (this->rgb_buffer == nullptr) {
         ESP_LOGE(TAG, "Initial RGB memory allocation failed (PSRAM)");
         esp_camera_fb_return(fb);
-        return
+        return;
       }
     }
 
@@ -310,44 +290,6 @@ bool CameraLightSensorHub::calculate_sensor_value(CameraLightSensor* s,
            num_pixels, (uint32_t)(end_time - start_time));
 
   return dist_sq <= s->get_match_radius_sq();
-}
-
-/**
- * @brief Serves a JPEG snapshot via HTTP.
- */
-esp_err_t CameraLightSensorHub::capture_handler(httpd_req_t* req) {
-  if (!esp_camera_sensor_get()) {
-    httpd_resp_send_500(req);
-    return ESP_FAIL;
-  }
-
-  camera_fb_t* fb = esp_camera_fb_get();
-  if (!fb) {
-    ESP_LOGE(TAG, "Camera fb get failed for /snapshot");
-    httpd_resp_send_500(req);
-    return ESP_FAIL;
-  }
-
-  httpd_resp_set_type(req, "image/jpeg");
-  httpd_resp_set_hdr(req, "Content-Disposition", "inline; filename=capture.jpg");
-
-  esp_err_t res = ESP_OK;
-  if (fb->format == PIXFORMAT_JPEG) {
-    res = httpd_resp_send(req, (const char*)fb->buf, fb->len);
-  } else {
-    uint8_t* jpeg_buf = NULL;
-    size_t jpeg_len = 0;
-    // Convert frame buffer to JPEG for serving over HTTP
-    if (frame2jpg(fb, 80, &jpeg_buf, &jpeg_len)) {
-      res = httpd_resp_send(req, (const char*)jpeg_buf, jpeg_len);
-      free(jpeg_buf);
-    } else {
-      res = ESP_FAIL;
-      httpd_resp_send_500(req);
-    }
-  }
-  esp_camera_fb_return(fb);
-  return res;
 }
 
 }  // namespace camera_light_sensor

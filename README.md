@@ -2,12 +2,17 @@
 
 This component allows you to use an ESP32-CAM (or similar) to monitor specific
 regions of its field of view and report whether they match a target color. It
-is ideal for detecting status LEDs on appliances like stoves, washing machines,
-or servers.
+is ideal for detecting status LEDs on appliances like stoves, or servers, or
+whatever else can be detected by changing colors.
 
 ## Configuration
 
-### Hub Configuration
+The component is broken into two parts:
+1. `binary_sensor`: This is a list of binary sensors that should be exposed.
+2. `camera_light_sensor`: This is the coordinator (or hub) responsible for the
+    business logic of converting camera frames to sensor values.
+
+### Camera Light Sensor Configuration
 
 The `camera_light_sensor` hub coordinates the camera and the sensors.
 
@@ -17,9 +22,6 @@ camera_light_sensor:
   id: camera_hub
   # The ID of the camera component to use.
   camera_id: my_camera
-  # Optional: If provided, starts a web server on this port.
-  # Visiting http://<device_ip>:<port>/ serves a snapshot for ROI alignment.
-  port: 8080
   # Optional: Heartbeat interval for all sensors. State changes are
   # pushed immediately but this serves as a backup. Defaults to 10s.
   update_interval: 10s
@@ -30,12 +32,9 @@ camera_light_sensor:
   - **`camera_id`** (Required, ID): The ID of the `esp32_camera` component. The
     hub automatically synchronizes its capture frequency with the camera's
     `idle_framerate`.
-  - **`port`** (Optional, Port): If provided, starts a web server on this port.
-    Visiting `http://<device_ip>:<port>/` will serve a JPEG snapshot from the
-    camera. Useful for aligning the regions of interest (ROI).
   - **`update_interval`** (Optional, Time): The heartbeat interval for syncing
-    state with Home Assistant. Note: State changes are still pushed immediately
-    upon detection. Defaults to `10min`.
+    state with Home Assistant. Note: State changes are pushed immediately
+    upon detection. This is simply a fail safe. Defaults to `10min`.
   - **Note:** Do not provide a `name` for the hub, as it is meant to coordinate
     the sensors and should not be exposed as a separate entity in Home
     Assistant.
@@ -166,10 +165,10 @@ Assume a target of **Pure Red** (HSV: 0, 255, 255) and default weights
 
 ## Calibration Tip
 
-Enable the `port` option during setup. Open the snapshot in a browser and use
-an image editor or online tool to find the exact pixel coordinates `[x1, y1,
-x2, y2]` for the LED you want to monitor. Once calibrated, you can remove the
-`port` configuration to save resources.
+To figure out the ROI bounds, simply give the `esp32_camera` component a name
+and Home Assistant should show you a live camera stream. This is resource
+intensive though, so remember to remove the name from `esp32_camera` to hide
+it from Home Assistant again.
 
 ---
 

@@ -1,6 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.const import CONF_ID, CONF_PORT, CONF_UPDATE_INTERVAL
+from esphome.const import CONF_ID, CONF_UPDATE_INTERVAL
 from esphome.core import CORE
 
 # Shared keys
@@ -19,7 +19,6 @@ CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(CameraLightSensorHub),
         cv.Required(CONF_CAMERA_ID): cv.use_id(cg.EntityBase),
-        cv.Optional(CONF_PORT): cv.port,
     }
 ).extend(cv.polling_component_schema("10min"))
 
@@ -29,9 +28,6 @@ async def to_code(config):
 
     camera = await cg.get_variable(config[CONF_CAMERA_ID])
     cg.add(hub_var.set_camera(camera))
-
-    if CONF_PORT in config:
-        cg.add(hub_var.set_port(config[CONF_PORT]))
 
     cg.add(hub_var.set_update_interval_ms(config[CONF_UPDATE_INTERVAL]))
 

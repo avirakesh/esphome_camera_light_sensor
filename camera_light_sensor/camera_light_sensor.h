@@ -160,12 +160,6 @@ class CameraLightSensorHub : public PollingComponent {
   void set_camera(esp32_camera::ESP32Camera* camera) { this->camera = camera; }
 
   /**
-   * @brief Sets the HTTP server port for snapshots.
-   * @param port The port to listen on.
-   */
-  void set_port(uint16_t port) { this->port = port; }
-
-  /**
    * @brief Sets the processing frequency for the background task.
    * @param ms The interval in milliseconds.
    */
@@ -219,18 +213,8 @@ class CameraLightSensorHub : public PollingComponent {
 
   uint8_t* rgb_buffer = nullptr;  // Persistent RGB888 buffer in PSRAM.
 
-  uint16_t port = 0;                   // Snapshot HTTP server port (0 = disabled).
-  httpd_handle_t camera_httpd = NULL;  // Handle for the snapshot server.
-
   TaskHandle_t task_handle = NULL;      // Handle for the background task.
   std::atomic<bool> data_ready{false};  // Flag signaling new processing results are ready.
-
-  /**
-   * @brief HTTP handler for capturing and serving a JPEG snapshot.
-   * @param req The HTTP request object.
-   * @return esp_err_t result.
-   */
-  static esp_err_t capture_handler(httpd_req_t* req);
 
   /** @brief processes a single ROI for color analysis and updates the corresponding sensor. */
   bool calculate_sensor_value(CameraLightSensor* s, camera_fb_t* fb, uint8_t* out_buf);
