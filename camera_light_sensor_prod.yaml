@@ -67,6 +67,7 @@ external_components:
       type: git
       url: https://github.com/avirakesh/esphome_camera_light_sensor
       ref: main
+      path: . # Needed because I refuse to nest the component in a 'components' subdirectory
 
 # Hub configuration
 camera_light_sensor:
