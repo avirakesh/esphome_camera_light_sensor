@@ -7,7 +7,6 @@ from esphome.core import CORE
 CONF_CAMERA_LIGHT_SENSOR_ID = "camera_light_sensor_id"
 CONF_CAMERA_ID = "camera_id"
 
-# Define the C++ namespace for your component
 camera_light_sensor_ns = cg.esphome_ns.namespace("camera_light_sensor")
 
 DEPENDENCIES = ["esp32_camera"]
@@ -36,18 +35,33 @@ async def to_code(config):
 
     cg.add(hub_var.set_update_interval_ms(config[CONF_UPDATE_INTERVAL]))
 
-    # Try to find the idle_update_interval from the camera component's config
-    # to maintain the same frequency as the camera frame rate.
+    # Get the idle_framerate from the esp32_camera config.
+    # This is used as the sleep time. No point processing frames any faster.
     full_config = CORE.config
     if "esp32_camera" in full_config:
         cam_conf = full_config["esp32_camera"]
         if isinstance(cam_conf, list):
+            # returns either the matching block or None if not found
             cam_block = next((c for c in cam_conf if c.get(CONF_ID) == config[CONF_CAMERA_ID]), None)
         else:
             cam_block = cam_conf if cam_conf.get(CONF_ID) == config[CONF_CAMERA_ID] else None
 
-        if cam_block and "idle_framerate" in cam_block:
+        if cam_block is None:
+            raise cv.Invalid(
+                "CameraLightSensorHub: No matching esp32_camera block found for "
+                f"camera_id: {config[CONF_CAMERA_ID]}"
+            )
+
+        if "idle_framerate" not in cam_block:
+            idle_fps = 0.1
+        else:
             idle_fps = cam_block["idle_framerate"]
-            if idle_fps > 0:
-                idle_ms = int(1000.0 / idle_fps)
-                cg.add(hub_var.set_capture_interval_ms(idle_ms))
+
+        if idle_fps <= 0:
+            raise cv.Invalid(
+                "CameraLightSensorHub: idle_framerate must be greater than 0. "
+                f"Got {idle_fps} in camera block with id: {config[CONF_CAMERA_ID]}"
+            )
+
+        idle_ms = int(1000.0 / idle_fps)
+        cg.add(hub_var.set_capture_interval_ms(idle_ms))

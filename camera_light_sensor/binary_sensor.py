@@ -57,11 +57,15 @@ async def to_code(config):
     for item in config[CONF_SENSOR_ROI]:
         sensor_var = await binary_sensor.new_binary_sensor(item)
 
-        cg.add(
-            sensor_var.set_sensor_info(
-                item[CONF_ROI_NAME], item[CONF_ROI_BOX]
+        # Validate that ROI box is not degenerate
+        box = item[CONF_ROI_BOX]
+        if box[2] <= box[0] or box[3] <= box[1]:
+            raise cv.Invalid(
+                f"ROI box is degenerate: {box}. Ensure that "
+                f"[x_min, y_min, x_max, y_max] are in the correct order."
             )
-        )
+
+        cg.add(sensor_var.set_sensor_info(item[CONF_ROI_NAME], box))
 
         if CONF_ROI_COLOR in item:
             cg.add(sensor_var.set_expected_rgb(*item[CONF_ROI_COLOR]))

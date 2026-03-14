@@ -25,9 +25,9 @@ namespace camera_light_sensor {
  * @brief Simple 8-bit HSV color structure.
  */
 struct HSV {
-  uint8_t h;  ///< Hue (0-255 map to 0-360°)
-  uint8_t s;  ///< Saturation (0-255)
-  uint8_t v;  ///< Value (0-255)
+  uint8_t h;  // Hue (0-255 map to 0-360°)
+  uint8_t s;  // Saturation (0-255)
+  uint8_t v;  // Value (0-255)
 };
 
 /**
@@ -47,6 +47,9 @@ class CameraLightSensor : public binary_sensor::BinarySensor {
 
   /**
    * @brief Sets the expected target color using RGB.
+   *
+   * These are converted to RGB for comparison.
+   *
    * @param r Red component (0-255).
    * @param g Green component (0-255).
    * @param b Blue component (0-255).
@@ -79,25 +82,27 @@ class CameraLightSensor : public binary_sensor::BinarySensor {
     this->value_weight = v;
   }
 
-  /// @return The sensor's name.
+  /** @return The sensor's name. */
   std::string get_name() const { return name; }
-  /// @return Pointer to the ROI array [x1, y1, x2, y2].
+  /** @return Pointer to the ROI array [x1, y1, x2, y2]. */
   uint32_t* get_roi() { return roi; }
-  /// @return The expected HSV target.
+  /** @return The expected HSV target. */
   HSV get_expected_hsv() const { return expected_hsv; }
 
-  /// @return Match radius in HSV space.
+  /** @return Match radius in HSV space. */
   float get_match_radius() const { return match_radius; }
 
-  /// Cached values for optimized matching
+  /** @return Cached value for optimized matching. */
   float get_expected_v_f() const { return expected_v_f; }
   float get_expected_s_f() const { return expected_s_f; }
   float get_expected_h_angle() const { return expected_h_angle; }
   float get_match_radius_sq() const { return match_radius_sq; }
 
-  /// Weight accessors
+  /** @return The weight for the hue component. */
   float get_hue_weight() const { return hue_weight; }
+  /** @return The weight for the saturation component. */
   float get_saturation_weight() const { return saturation_weight; }
+  /** @return The weight for the value component. */
   float get_value_weight() const { return value_weight; }
 
   /**
@@ -105,7 +110,7 @@ class CameraLightSensor : public binary_sensor::BinarySensor {
    * @param state True if the target color matches the ROI.
    */
   void set_latest_state(bool state) { this->latest_state = state; }
-  /// @return The most recently calculated state.
+  /** @return The most recently calculated state. */
   bool get_latest_state() const { return this->latest_state; }
 
   /**
@@ -115,10 +120,10 @@ class CameraLightSensor : public binary_sensor::BinarySensor {
   void update_state(bool state) { this->publish_state(state); }
 
  private:
-  std::string name;                       ///< Display name of the sensor.
-  uint32_t roi[4];                        ///< Region of Interest: [x1, y1, x2, y2].
-  HSV expected_hsv;                       ///< Expected color in HSV.
-  float match_radius = 50.0f;             ///< Euclidean distance radius in HSV space.
+  std::string name;            // Display name of the sensor.
+  uint32_t roi[4];             // Region of Interest: [x1, y1, x2, y2].
+  HSV expected_hsv;            // Expected color in HSV.
+  float match_radius = 50.0f;  // Euclidean distance radius in HSV space.
 
   // Weights for distance components
   float hue_weight = 3.0f;
@@ -131,7 +136,7 @@ class CameraLightSensor : public binary_sensor::BinarySensor {
   float expected_h_angle = 0.0f;
   float match_radius_sq = 2500.0f;
 
-  std::atomic<bool> latest_state{false};  ///< Thread-safe storage for the latest calculated state.
+  std::atomic<bool> latest_state{false};  // Thread-safe storage for the latest calculated state.
 };
 
 /**
@@ -172,14 +177,16 @@ class CameraLightSensorHub : public PollingComponent {
    */
   void set_capture_interval_ms(uint32_t ms) { this->capture_interval_ms = ms; }
 
-  /// @return Setup priority; ensures Wi-Fi is up before starting HTTP server.
+  /** @return Setup priority; ensures Wi-Fi is up before starting HTTP server. */
   float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
 
-  /// Initializes the HTTP server and background processing task.
+  /** @brief Initializes the HTTP server and background processing task. */
   void setup() override;
-  /// Checks for new data from the background task and pushes updates.
+
+  /** @brief Checks for new data from the background task and pushes updates. */
   void loop() override;
-  /// Periodic heartbeat update to ensure Home Assistant state remains synced.
+
+  /** @brief Periodic heartbeat update to ensure Home Assistant state remains synced. */
   void update() override;
 
   /**
@@ -188,10 +195,10 @@ class CameraLightSensorHub : public PollingComponent {
    */
   static void task_wrapper(void* param) { static_cast<CameraLightSensorHub*>(param)->task_loop(); }
 
-  /// Main loop for the background FreeRTOS task.
+  /** @brief Main loop for the background FreeRTOS task. */
   void task_loop();
 
-  /// Captures a frame, converts format if needed, and analyzes all ROIs.
+  /** @brief Captures a frame, converts format if needed, and analyzes all ROIs. */
   void process_camera();
 
   /**
@@ -204,16 +211,19 @@ class CameraLightSensorHub : public PollingComponent {
   static HSV rgb_to_hsv(uint8_t r, uint8_t g, uint8_t b);
 
  private:
-  std::vector<CameraLightSensor*> sensors;  ///< List of managed sensors.
-  esp32_camera::ESP32Camera* camera{nullptr}; ///< Pointer to the ESP32 camera component.
-  uint16_t port = 0;                        ///< Snapshot HTTP server port (0 = disabled).
-  uint32_t update_interval_ms = 500;        ///< Interval between captures in ms.
-  uint32_t capture_interval_ms = 0;         ///< Interval between captures (auto-derived).
-  uint8_t* rgb_buffer = nullptr;            ///< Persistent RGB888 buffer in PSRAM.
-  size_t rgb_buffer_capacity = 0;           ///< Current capacity of the RGB buffer.
-  httpd_handle_t camera_httpd = NULL;       ///< Handle for the snapshot server.
-  TaskHandle_t task_handle = NULL;          ///< Handle for the background task.
-  std::atomic<bool> data_ready{false};      ///< Flag signaling new processing results are ready.
+  std::vector<CameraLightSensor*> sensors;  // List of managed sensors.
+
+  esp32_camera::ESP32Camera* camera{nullptr};  // Pointer to the ESP32 camera component.
+  uint32_t update_interval_ms = 500;           // Interval between captures in ms.
+  uint32_t capture_interval_ms = 0;            // Interval between captures (auto-derived).
+
+  uint8_t* rgb_buffer = nullptr;  // Persistent RGB888 buffer in PSRAM.
+
+  uint16_t port = 0;                   // Snapshot HTTP server port (0 = disabled).
+  httpd_handle_t camera_httpd = NULL;  // Handle for the snapshot server.
+
+  TaskHandle_t task_handle = NULL;      // Handle for the background task.
+  std::atomic<bool> data_ready{false};  // Flag signaling new processing results are ready.
 
   /**
    * @brief HTTP handler for capturing and serving a JPEG snapshot.
@@ -221,6 +231,9 @@ class CameraLightSensorHub : public PollingComponent {
    * @return esp_err_t result.
    */
   static esp_err_t capture_handler(httpd_req_t* req);
+
+  /** @brief processes a single ROI for color analysis and updates the corresponding sensor. */
+  bool calculate_sensor_value(CameraLightSensor* s, camera_fb_t* fb, uint8_t* out_buf);
 };
 
 }  // namespace camera_light_sensor
