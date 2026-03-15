@@ -101,30 +101,30 @@ allows you to tune the sensor's sensitivity to different aspects of the color.
 
 ### The Matching Formula
 
-The distance $d$ between the captured color $(H_1, S_1, V_1)$ and the target
-color $(H_2, S_2, V_2)$ is calculated as:
+The distance $`d`$ between the captured color $`(H_1, S_1, V_1)`$ and the target
+color $`(H_2, S_2, V_2)`$ is calculated as:
 
 $$d = \sqrt{w_v(V_1 - V_2)^2 + w_s(S_1 - S_2)^2 + w_h(2S_1S_2(1 - \cos(H_1 - H_2)))}$$
 
 Where:
-- $w_h, w_s, w_v$ are the configured weights for Hue, Saturation, and Value.
-- $H$ is the Hue angle (converted from the 0-255 range to 0-2π).
-- A match is confirmed if $d \leq \text{match\_radius}$.
+- $`w_h, w_s, w_v`$ are the configured weights for Hue, Saturation, and Value.
+- $`H`$ is the Hue angle (converted from the 0-255 range to 0-2π).
+  A match is confirmed if $`d \leq \text{match\_radius}`$.
 
 ### Calculation Examples
 
 Assume a target of **Pure Red** (HSV: 0, 255, 255) and default weights
-($w_h=3, w_s=1, w_v=1$):
+($`w_h=3, w_s=1, w_v=1`$):
 
 1.  **Slightly Dimmer Red** (HSV: 0, 255, 200):
-    - $V$ difference is 55. $d = \sqrt{1 \cdot (55)^2} = 55.0$.
+    - $V$ difference is 55. $`d = \sqrt{1 \cdot (55)^2} = 55.0`$.
     - With a `match_radius` of 50, this is a **No Match**.
-    - *Tuning Fix:* Lower `value_weight` to 0.1 → $d = \sqrt{0.1 \cdot 3025}
-      \approx 17.4$ (**Match**).
+    - *Tuning Fix:* Lower `value_weight` to 0.1 → $`d = \sqrt{0.1 \cdot 3025}
+      \approx 17.4`$ (**Match**).
 
 2.  **Slightly Orange Shift** (HSV: 10, 255, 255):
-    - $H$ difference is ~14°. $d = \sqrt{3 \cdot (2 \cdot 255^2 \cdot (1 -
-      \cos(14^\circ)))} \approx 108.5$.
+    - $H$ difference is ~14°. $`d = \sqrt{3 \cdot (2 \cdot 255^2 \cdot (1 -
+      \cos(14^\circ)))} \approx 108.5`$.
     - This is a **No Match**.
     - *Tuning Fix:* Increase `match_radius` to 110 OR lower `hue_weight` to 0.5.
 
