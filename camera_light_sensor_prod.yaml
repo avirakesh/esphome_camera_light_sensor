@@ -21,6 +21,15 @@ ota:
   platform: esphome
   password: !secret ota_password
 
+# I couldn't quite get the esp32_ble_tracker to work reliably, but feel free to
+# experiment.
+# NOTE: ESP BLE Tracker requires the device to be plugged in the first time it
+# is enabled. OTAs can resume after.
+# esp32_ble_tracker:
+#   scan_parameters:
+#     active: true
+
+# Bluetooth proxy worked well without any issues
 # bluetooth_proxy:
 #   active: true
 
@@ -36,6 +45,13 @@ wifi:
 # Required for image buffering and conversion
 psram:
 
+# ESPHome in HA wants the i2c bus to be defined in a separate block
+# and referenced by ID in i2c_id.
+i2c:
+  - id: cam_i2c_bus
+    sda: GPIO26
+    scl: GPIO27
+
 # Standard ESP32-CAM Pinout
 # Change this to ensure esp32_camera component works correctly with the hardware.
 esp32_camera:
@@ -47,9 +63,7 @@ esp32_camera:
   external_clock:
     pin: GPIO0
     frequency: 20MHz
-  i2c_pins:
-    sda: GPIO26
-    scl: GPIO27
+  i2c_id: cam_i2c_bus
   data_pins: [GPIO5, GPIO18, GPIO19, GPIO21, GPIO36, GPIO39, GPIO34, GPIO35]
   vsync_pin: GPIO25
   href_pin: GPIO23
