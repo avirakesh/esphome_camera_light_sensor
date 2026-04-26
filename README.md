@@ -1,11 +1,10 @@
 # ESPHome Camera Light Sensor
 
 > [!IMPORTANT]
-> Key information users need to know to achieve their goal. Shortly after
-> creating this project, I ended up using an entirely different solution. So as
-> of now, I am no longer high on my own supply :(. Until I find another use for
-> it, this project will largely be in maintenance mode. Feel free to submit
-> issues and PR if you run into issues.
+> Shortly after creating this project, I ended up using an entirely different
+> solution. So as of now, I am no longer high on my own supply :(. Until I find
+> another use for it, this project will largely be inmaintenance mode. Feel free
+> to submit issues and PR if you run into issues.
 
 This component allows you to use an ESP32-CAM (or similar) to monitor specific
 regions of its field of view and report whether they match a target color. It
