@@ -1,5 +1,10 @@
 # ESPHome Camera Light Sensor
 
+> **NOTE**: Shortly after creating this project, I ended up using an
+> entirely different solution. So as of now, I am no longer high on my own
+> supply :(. Until I find another use for it, this project will largely be in
+> maintenance mode. Feel free to submit issues and PR if you run into issues.
+
 This component allows you to use an ESP32-CAM (or similar) to monitor specific
 regions of its field of view and report whether they match a target color. It
 is ideal for detecting status LEDs on appliances like stoves, or servers, or
@@ -139,12 +144,12 @@ Assume a target of **Pure Red** (HSV: 0, 255, 255) and default weights
 
 ### Example Scenarios
 
-| Scenario | Recommended Tuning | Why? |
-| :--- | :--- | :--- |
-| **Differentiating Red vs. Orange** | High `hue_weight` (e.g., 5.0) | Ensures the sensor only triggers for the exact hue, even if brightness is similar. |
-| **Variable Ambient Lighting** | Low `value_weight` (e.g., 0.2) | Makes the sensor ignore changes in brightness caused by external light or shadows. |
-| **Faint LED in Bright Room** | High `saturation_weight` (e.g., 3.0) | Helps distinguish the saturated color of the LED from the desaturated white/grey background. |
-| **Night Monitoring** | Balanced `value_weight` | In very dark environments, the "Value" (brightness) is often the most reliable indicator of an LED being ON. |
+| Scenario                           | Recommended Tuning                   | Why?                                                                                                         |
+| :--------------------------------- | :----------------------------------- | :----------------------------------------------------------------------------------------------------------- |
+| **Differentiating Red vs. Orange** | High `hue_weight` (e.g., 5.0)        | Ensures the sensor only triggers for the exact hue, even if brightness is similar.                           |
+| **Variable Ambient Lighting**      | Low `value_weight` (e.g., 0.2)       | Makes the sensor ignore changes in brightness caused by external light or shadows.                           |
+| **Faint LED in Bright Room**       | High `saturation_weight` (e.g., 3.0) | Helps distinguish the saturated color of the LED from the desaturated white/grey background.                 |
+| **Night Monitoring**               | Balanced `value_weight`              | In very dark environments, the "Value" (brightness) is often the most reliable indicator of an LED being ON. |
 
 ## How it Works
 
